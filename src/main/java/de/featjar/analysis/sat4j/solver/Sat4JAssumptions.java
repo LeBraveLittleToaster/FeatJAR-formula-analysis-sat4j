@@ -114,19 +114,27 @@ public class Sat4JAssumptions implements Assignment {
         return assumptions.get(i);
     }
 
-    @Override
-    public void set(int index, Object assignment) {
-        if (assignment instanceof Boolean) {
-            for (int i = 0; i < assumptions.size(); i++) {
-                final int l = assumptions.unsafeGet(i);
-                if (Math.abs(l) == index) {
-                    assumptions.set(i, (Boolean) assignment ? l : -l);
-                    return;
-                }
-            }
-            assumptions.push((Boolean) assignment ? index : -index);
-        }
-    }
+	@Override
+	public void set(int variable, Object assignment) {
+		if (assignment instanceof Boolean) {
+			for (int i = 0; i < assumptions.size(); i++) {
+				final int var = Math.abs(assumptions.unsafeGet(i));
+				if (var == variable) {
+					assumptions.set(i, (Boolean) assignment ? var : -var);
+					return;
+				}
+			}
+			assumptions.push((Boolean) assignment ? variable : -variable);
+		} else if (assignment == null) {
+			for (int i = 0; i < assumptions.size(); i++) {
+				final int var = Math.abs(assumptions.unsafeGet(i));
+				if (var == variable) {
+					assumptions.delete(i);
+					return;
+				}
+			}
+		}
+	}
 
     public void set(String name, Object assignment) {
         final int index = variables.getVariableIndex(name).orElse(-1);

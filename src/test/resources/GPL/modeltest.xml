@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<FeatureModel>
+	<properties>
+		<graphics key="autolayoutconstraints" value="false"/>
+		<graphics key="legendautolayout" value="true"/>
+		<graphics key="showshortnames" value="false"/>
+		<graphics key="layout" value="horizontal"/>
+		<graphics key="showcollapsedconstraints" value="true"/>
+		<graphics key="legendhidden" value="false"/>
+		<graphics key="layoutalgorithm" value="1"/>
+	</properties>
+	<struct>
+		<and abstract="true" mandatory="true" name="FancyTextEditor">
+			<and mandatory="true" name="Header">
+				<description>there should be a header in which basic operations like "close the application" are displayed</description>
+				<alt name="FancyColor">
+					<description>there should be the possibilty to set the header color</description>
+					<feature name="Rainbow">
+						<description>the header is displayed in rainbow colors  #againstHomophobia</description>
+					</feature>
+					<feature name="Green">
+						<description>the header is displayed in green</description>
+					</feature>
+				</alt>
+				<feature mandatory="true" name="CloseButton">
+					<description>it should be possible to close the current file</description>
+				</feature>
+				<feature mandatory="true" name="Minimize">
+					<description>it should be possible to minimize the application</description>
+				</feature>
+				<feature mandatory="true" name="Name">
+					<description>each file should have a name</description>
+				</feature>
+			</and>
+			<alt abstract="true" name="Time">
+				<description>in the header there should be the possibilty to display the current time</description>
+				<feature name="AnalogClock">
+					<description>there shall be a fancy analog clock</description>
+				</feature>
+				<feature name="DigitalClock">
+					<description>there shall be a fancy digital clock</description>
+				</feature>
+			</alt>
+			<and name="Calendar">
+				<description>in the toolbar there should be button that opens a calendar</description>
+				<and mandatory="true" name="AddAppointment">
+					<description>the user should be able to create new appointments in the calendar</description>
+					<feature mandatory="true" name="Date">
+						<description>for the appointments it should be possible to set a topic like "date"</description>
+					</feature>
+					<feature mandatory="true" name="Deadline">
+						<description>for the appointments it should be possible to set a topic like "deadline"</description>
+					</feature>
+					<feature mandatory="true" name="Birthday">
+						<description>for the appointments it should be possible to set a topic like "birthday"</description>
+					</feature>
+				</and>
+				<feature mandatory="true" name="DeleteAppointment">
+					<description>the user should be able to delete appointments in the calendar</description>
+				</feature>
+				<feature name="Reminder">
+					<description>the user should be able set a reminder for each appointment</description>
+				</feature>
+			</and>
+			<feature mandatory="true" name="TextArea">
+				<description>the basic surface should be a text area where the user can insert text to save a file later on</description>
+			</feature>
+			<and mandatory="true" name="ToolBar">
+				<description>in the toolbar all possible operations should be displayed by buttons that the user can perform</description>
+				<and abstract="true" mandatory="true" name="File">
+					<description>
+						the text you enter in the text area should be able to be saved to files.
+						Furthermore, other text files should be able to be displayed and loaded.
+					</description>
+					<feature mandatory="true" name="NewFile">
+						<description>the user should be able to create a new file</description>
+					</feature>
+					<feature mandatory="true" name="SaveFile">
+						<description>the user should be able to save the current file</description>
+					</feature>
+					<feature mandatory="true" name="OpenFile">
+						<description>the user should be able to open existing files</description>
+					</feature>
+				</and>
+				<feature name="Search">
+					<description>it should be possible to search for keywords in the text in the text area</description>
+				</feature>
+				<or abstract="true" name="Font">
+					<description>for the text in the text area it should be possible to change font settings</description>
+					<graphics key="collapsed" value="false"/>
+					<feature name="FontSize">
+						<description>one should be able to change the font size</description>
+					</feature>
+					<feature name="Type">
+						<description>one should be able to change the font type</description>
+					</feature>
+					<feature name="Italic"/>
+					<feature name="Bold">
+						<description>one should be able to change the set the font bold</description>
+					</feature>
+					<feature name="Highlight">
+						<description>one should be able to change highlight the text</description>
+					</feature>
+				</or>
+				<feature name="ClearTextArea">
+					<description>the user should be able to clear the whole text area</description>
+				</feature>
+				<feature name="Sticker">
+					<description>the user should be able to add some fancy stickers</description>
+				</feature>
+				<feature name="Emojis">
+					<description>the user should be able to add some fance emojis</description>
+				</feature>
+			</and>
+			<feature name="Calculator">
+				<description>a minimalistic calculator should be opened by clicking on a button in the toolbar</description>
+			</feature>
+			<and name="TODOList">
+				<description>there should be a button that opens an extra window that can display todos.</description>
+				<feature mandatory="true" name="AddItem">
+					<description>a new item should be added if the user wants to</description>
+				</feature>
+				<feature mandatory="true" name="DeleteItem">
+					<description>an item should be deleted if the user wants to</description>
+				</feature>
+				<feature name="Checkbox">
+					<description>
+						when a todo is done the user should be able
+						to check it off in the form of a checkbox with a check mark
+					</description>
+				</feature>
+			</and>
+			<feature name="Galery">
+				<description>optionally there should be a button that opens a gallery of images</description>
+			</feature>
+		</and>
+	</struct>
+	<constraints>
+		<rule>
+			<imp>
+				<var>Calendar</var>
+				<var>Time</var>
+			</imp>
+		</rule>
+		<rule>
+			<eq>
+				<var>Rainbow</var>
+				<var>Sticker</var>
+			</eq>
+		</rule>
+	</constraints>
+</FeatureModel>
