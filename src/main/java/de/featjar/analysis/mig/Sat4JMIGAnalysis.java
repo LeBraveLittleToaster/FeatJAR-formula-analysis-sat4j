@@ -46,7 +46,7 @@ public abstract class Sat4JMIGAnalysis<T> extends AbstractAnalysis<T, Sat4JMIGSo
 
     public Sat4JMIGAnalysis() {
         super();
-        solverInputProvider = MIGProvider.fromFormula();
+        solverInputProvider = MIGProvider.fromFormula(false, false);
     }
 
     @Override

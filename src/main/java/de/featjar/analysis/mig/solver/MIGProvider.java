@@ -56,12 +56,17 @@ public interface MIGProvider extends Provider<MIG> {
         return (c, m) -> Provider.load(path, FormatSupplier.of(new MIGFormat()));
     }
 
-    static <T> MIGProvider fromFormula() {
-        return (c, m) -> Provider.convert(c, CNFProvider.identifier, new RegularMIGBuilder(), m);
+    static <T> MIGProvider fromFormula(boolean checkRedundancy, boolean detectStrong) {
+        return (c, m) -> {
+        	RegularMIGBuilder builder = new RegularMIGBuilder();
+        	builder.setCheckRedundancy(checkRedundancy);
+        	builder.setDetectStrong(detectStrong);
+			return Provider.convert(c, CNFProvider.fromFormula(), builder, m);
+        };
     }
 
     static <T> MIGProvider fromCNF() {
-        return (c, m) -> Provider.convert(c, CNFProvider.fromFormula(), new RegularMIGBuilder(), m);
+        return (c, m) -> Provider.convert(c, CNFProvider.identifier, new RegularMIGBuilder(), m);
     }
 
     //	static <T> MIGProvider fromOldMig(MIG oldMig) {
