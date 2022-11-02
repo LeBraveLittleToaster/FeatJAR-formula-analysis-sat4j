@@ -22,13 +22,16 @@ package de.featjar.assignment;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
 import de.featjar.analysis.Analysis;
-import de.featjar.analysis.mig.ConditionallyCoreDeadAnalysisMIG;
+import de.featjar.analysis.mig.CoreDeadAnalysis;
 import de.featjar.analysis.sat4j.AddRedundancyAnalysis;
 import de.featjar.analysis.sat4j.AtomicSetAnalysis;
 import de.featjar.analysis.sat4j.CauseAnalysis;
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
-import de.featjar.analysis.sat4j.CoreDeadAnalysis;
 import de.featjar.analysis.sat4j.CountSolutionsAnalysis;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
 import de.featjar.analysis.sat4j.IndependentContradictionAnalysis;
@@ -48,8 +51,6 @@ import de.featjar.util.data.Problem;
 import de.featjar.util.data.Result;
 import de.featjar.util.job.Executor;
 import de.featjar.util.logging.Logger;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 public class CNFTest {
 
@@ -84,7 +85,7 @@ public class CNFTest {
         executeAnalysis(rep, new IndependentRedundancyAnalysis());
         executeAnalysis(rep, new IndeterminateAnalysis());
         executeAnalysis(rep, new RemoveRedundancyAnalysis());
-        executeAnalysis(rep, new ConditionallyCoreDeadAnalysisMIG());
+        executeAnalysis(rep, new CoreDeadAnalysis());
 
         final CNF cnf = rep.get(CNFProvider.fromFormula());
         final CNFSlicer slicer = new CNFSlicer(new LiteralList(2));

@@ -23,9 +23,9 @@ package de.featjar.analysis.sat4j.solver.strategy;
 import static org.sat4j.core.LiteralsUtils.negLit;
 import static org.sat4j.core.LiteralsUtils.posLit;
 
-public class ReverseFixedLiteralSelectionStrategy extends FixedLiteralSelectionStrategy {
+public class InverseFixedLiteralSelectionStrategy extends FixedLiteralSelectionStrategy {
 
-    public ReverseFixedLiteralSelectionStrategy(int[] model) {
+    public InverseFixedLiteralSelectionStrategy(int[] model) {
         super(model);
     }
 
