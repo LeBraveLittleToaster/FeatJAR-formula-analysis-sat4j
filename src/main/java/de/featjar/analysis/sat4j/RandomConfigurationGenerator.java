@@ -20,6 +20,8 @@
  */
 package de.featjar.analysis.sat4j;
 
+import de.featjar.analysis.sat4j.solver.SStrategy;
+import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.solver.RuntimeContradictionException;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.job.InternalMonitor;
@@ -43,18 +45,20 @@ public abstract class RandomConfigurationGenerator extends AbstractConfiguration
     protected void init(InternalMonitor monitor) {
         super.init(monitor);
         satisfiable = true;
+    }    
+    
+    @Override
+    protected void prepareSolver(Sat4JSolver solver) {
+        super.prepareSolver(solver);
+        solver.setSelectionStrategy(SStrategy.random());
     }
 
     @Override
     public LiteralList get() {
-        if (!satisfiable) {
-            return null;
-        }
         reset();
         solver.shuffleOrder(random);
         final LiteralList solution = solver.findSolution();
         if (solution == null) {
-            satisfiable = false;
             return null;
         }
         if (!allowDuplicates) {

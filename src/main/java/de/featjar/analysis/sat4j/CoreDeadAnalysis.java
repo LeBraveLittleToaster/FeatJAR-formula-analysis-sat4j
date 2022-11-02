@@ -20,15 +20,17 @@
  */
 package de.featjar.analysis.sat4j;
 
+import java.util.Arrays;
+
+import org.sat4j.core.VecInt;
+import org.sat4j.specs.IteratorInt;
+
 import de.featjar.analysis.sat4j.solver.SStrategy;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.solver.RuntimeContradictionException;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.data.Identifier;
 import de.featjar.util.job.InternalMonitor;
-import java.util.Arrays;
-import org.sat4j.core.VecInt;
-import org.sat4j.specs.IteratorInt;
 
 /**
  * Finds core and dead features.
@@ -178,6 +180,7 @@ public class CoreDeadAnalysis extends AVariableAnalysis<LiteralList> {
         solver.setSelectionStrategy(SStrategy.positive());
         int[] model1 = solver.findSolution().getLiterals();
 
+		// TODO return null for contradiction
         if (model1 != null) {
             solver.setSelectionStrategy(SStrategy.inverse(model1));
             final int[] model2 = solver.findSolution().getLiterals();
