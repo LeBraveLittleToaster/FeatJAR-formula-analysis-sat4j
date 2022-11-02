@@ -32,6 +32,9 @@ import java.util.Random;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import de.featjar.analysis.mig.solver.MIG;
+import de.featjar.analysis.mig.solver.MIGProvider;
+import de.featjar.analysis.mig.solver.Vertex;
 import de.featjar.analysis.sat4j.AtomicSetAnalysis;
 import de.featjar.analysis.sat4j.ConfigurationCompletor;
 import de.featjar.analysis.sat4j.FastRandomConfigurationGenerator;
@@ -42,14 +45,14 @@ import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
-import de.featjar.clauses.solutions.analysis.AbstractInteractionFinder;
-import de.featjar.clauses.solutions.analysis.InteractionFinderNaive;
+import de.featjar.clauses.solutions.analysis.InteractionFinder;
+import de.featjar.clauses.solutions.analysis.InteractionFinderAtLeastOne;
+import de.featjar.clauses.solutions.analysis.InteractionFinderCombinationForward;
 import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.AuxiliaryRoot;
 import de.featjar.formula.structure.Formula;
 import de.featjar.formula.structure.atomic.Atomic;
 import de.featjar.formula.structure.atomic.literal.BooleanLiteral;
-import de.featjar.formula.structure.atomic.literal.Literal;
 import de.featjar.formula.structure.atomic.literal.VariableMap;
 import de.featjar.formula.structure.compound.Compound;
 import de.featjar.formula.structure.compound.Or;
@@ -59,7 +62,6 @@ import de.featjar.util.io.csv.CSVWriter;
 import de.featjar.util.job.NullMonitor;
 import de.featjar.util.logging.Logger;
 import de.featjar.util.tree.Trees;
-import de.featjar.util.tree.visitor.TreePrinter;
 import de.featjar.util.tree.visitor.TreeVisitor;
 
 public class InteractionFinderTest {
@@ -68,13 +70,10 @@ public class InteractionFinderTest {
 		ExtensionLoader.load();
 	}
 
-	private static final int maxT = 4;
-
 	private static final Random randomSeed = new Random(314159);
-	private static final int interactionSize = 2;
-	private static final int iterations = 1;
-
-	private static final int sampleSize = 2;
+	private static final int maxInteractionSize = 3;
+	private static final int iterations = 100;
+	private static final boolean computeAtomicSets = false;
 
 	private static CSVWriter writer;
 
@@ -95,28 +94,13 @@ public class InteractionFinderTest {
 	}
 
 	public static void main(String[] args) throws IOException {
-//		String s = System.getProperty("user.home");
-//		Path path = Paths.get(s, "Desktop/daten.csv");
-
 		writer = new CSVWriter();
 		writer.setOutputFile(Paths.get("daten.csv"));
-		writer.setHeader("Model", "testi", "testn", "testRes", "failingInteraction", "foundInteraction", "FIListLength",
-				"configCount", "interactionCount", "time");
+		writer.setHeader("model_name", "interaction_size", "iteration", "interaction", "success",
+				"found_interactions_count", "merged_interactions_size", "updated_interactions_size",
+				"found_interactions", "merged_interactions", "updated_interactions", "configuration_count", "time");
 
 		InteractionFinderTest.printCompare();
-
-//		try (BufferedWriter writeBuf = Files.newBufferedWriter(path)) {
-//			writeBuf.write(String.format(
-//					"testi;testn;testRes;failingInteraction;foundInteraction;FIListLength;configCount;time;%n"));
-//			for (int i = 0; i < results.length; i++) {
-//				String line = results[i];
-//				writeBuf.write(line);
-//			}
-//			writeBuf.close();
-//		} catch (IOException e) {
-//			System.out.printf("IO: %s%n", e.getMessage());
-//		}
-
 	}
 
 	private static class AtomicSetReplacer implements TreeVisitor<Void, Formula> {
@@ -195,123 +179,114 @@ public class InteractionFinderTest {
 //		ModelRepresentation model = getModel(Paths.get("src/test/resources/testFeatureModels/busybox.xml")); // modeltest.xml
 //		ModelRepresentation model = getModel(100);
 
-//		System.out.println(model.getFormula().toString());
 			VariableMap variables = model.getVariables();
-			System.out.println(variables.toString());
+			LiteralList coreDead;
 
-			final List<LiteralList> atomicSets = model.get(new AtomicSetAnalysis());
-			LiteralList coreDead = atomicSets.get(0);
-			List<LiteralList> atomicSetsWithoutCore = atomicSets.subList(1, atomicSets.size());
-			System.out.println("atomic sets: " + atomicSets);
+			MIG mig = model.get(MIGProvider.fromFormula(false, false));
+			if (computeAtomicSets) {
+				final List<LiteralList> atomicSets = model.get(new AtomicSetAnalysis());
+				coreDead = atomicSets.get(0);
+				List<LiteralList> atomicSetsWithoutCore = atomicSets.subList(1, atomicSets.size());
 
-			Formula formulaWithoutAtomicSets = Trees.cloneTree(model.getFormula());
-			Trees.traverse(formulaWithoutAtomicSets, new AtomicSetReplacer(variables, atomicSetsWithoutCore));
+				Formula formulaWithoutAtomicSets = Trees.cloneTree(model.getFormula());
+				Trees.traverse(formulaWithoutAtomicSets, new AtomicSetReplacer(variables, atomicSetsWithoutCore));
 
-			VariableMap variablesWithoutAtomicSets = variables.clone();
-			for (LiteralList atomicSet : atomicSetsWithoutCore) {
-				for (int i = 1; i < atomicSet.getLiterals().length; i++) {
-					variablesWithoutAtomicSets.removeVariable(Math.abs(atomicSet.get(i)));
+				VariableMap variablesWithoutAtomicSets = variables.clone();
+				for (LiteralList atomicSet : atomicSetsWithoutCore) {
+					for (int i = 1; i < atomicSet.getLiterals().length; i++) {
+						variablesWithoutAtomicSets.removeVariable(Math.abs(atomicSet.get(i)));
+					}
 				}
+				variablesWithoutAtomicSets.normalize();
+
+				Trees.traverse(formulaWithoutAtomicSets, new VariableMapSetter(variablesWithoutAtomicSets));
+
+				coreDead = Clauses.adapt(coreDead, variables, variablesWithoutAtomicSets).get();
+				model = new ModelRepresentation(formulaWithoutAtomicSets);
+				variables = variablesWithoutAtomicSets;
+			} else {
+				coreDead = new LiteralList(mig.getVertices().stream().filter(Vertex::isCore).mapToInt(Vertex::getVar).toArray());
 			}
-			variablesWithoutAtomicSets.normalize();
+			
+			for (int interactionSize = 2; interactionSize <= maxInteractionSize; interactionSize++) {
+				long initialSampleSeed = randomSeed.nextLong();
+				long randomSampleSeed = randomSeed.nextLong();
 
-			Trees.traverse(formulaWithoutAtomicSets, new VariableMapSetter(variablesWithoutAtomicSets));
+				List<Integer> configCounts = new ArrayList<>();
 
-			coreDead = Clauses.adapt(coreDead, variables, variablesWithoutAtomicSets).get();
-			model = new ModelRepresentation(formulaWithoutAtomicSets);
-			variables = variablesWithoutAtomicSets;
+				for (int i = 14; i < iterations; i++) {
 
-			System.out.println(variablesWithoutAtomicSets.toString());
-			System.out.println(Trees.traverse(formulaWithoutAtomicSets, new TreePrinter()));
+					long startIterationTime = System.nanoTime();
 
-			// System.out.println("core/dead: " + coreDead.size());// .size()
+					Random sampleRandom = new Random(i + initialSampleSeed);
 
-			long initialSampleSeed = randomSeed.nextLong();
-			long randomSampleSeed = randomSeed.nextLong();
+					// HERE add failingConfig
+					final List<LiteralList> input = generateInput(model, interactionSize, coreDead, sampleRandom);
+					LiteralList failInteraction = input.get(0);
+					List<LiteralList> sample = input.subList(1, 3);
 
-			for (int i = 0; i < iterations; i++) {
+					Random completorRandom = new Random(i + randomSampleSeed);
 
-				long startIterationTime = System.nanoTime();
+					// HERE verifier contains failing interaction
+					ConfigurationVerifier verifier = new ConfigurationVerifier(failInteraction);
 
-				Random sampleRandom = new Random(i + initialSampleSeed);
+					InteractionFinder finder = new InteractionFinderAtLeastOne(sample,
+							createCompletor(model, completorRandom), verifier);
 
-				// HERE add failingConfig
-				final List<LiteralList> input = generateInput(model, interactionSize, coreDead, sampleRandom);
-				LiteralList failInteraction = input.get(0);
-				List<LiteralList> sample = input.subList(1, 3);
-//			final List<LiteralList> sample = createRandomSample(model, 1, sampleRandom); //createTWiseSample(model, 2);
+					finder = new InteractionFinderCombinationForward(finder);
 
-				Random completorRandom = new Random(i + randomSampleSeed);
+					finder.setCore(coreDead);
 
-				// HERE verifier contains failing interaction
-				ConfigurationVerifier verifier = new ConfigurationVerifier(failInteraction);
+					int numberOfFeats = variables.getVariableCount();
 
-				final AbstractInteractionFinder finder = new InteractionFinderNaive(sample,
-						createCompletor(model, completorRandom), verifier);
+					int t = maxInteractionSize;
+					List<LiteralList> foundInteraction = finder.find(t, numberOfFeats - coreDead.size());
 
-				finder.setCore(coreDead);
+					int foundInteractionListLength = foundInteraction.size();
+					int configurationCount = finder.getConfigurationCount() - sample.size();
 
-//			System.out.println(model.getVariables().toString());
-//			System.out.println("core/dead: " + coreDead);// .size()
+					configCounts.add(configurationCount);
 
-				int numberOfFeats = variables.getVariableCount();
+					LiteralList merged = finder.merge(foundInteraction);
+					LiteralList updated = finder.update(merged);
 
-				List<LiteralList> foundInteraction = finder.find(verifier.interaction.size(),
-						numberOfFeats - coreDead.size());
+					System.out.println(i + " " + (updated.containsAll(failInteraction) ? "OK" : "FAIL") + " "
+							+ verifier.interaction + " #Configs: " + configurationCount + " #Found: "
+							+ foundInteractionListLength + ": " + merged + " -> " + updated);
 
-				int foundInteractionListLength = foundInteraction.size();
-				System.out.println("ListLength: " + foundInteractionListLength);
+					long finishIterationTime = System.nanoTime();
+					long timeElapsedIteration = finishIterationTime - startIterationTime;
+					double elapsedTimeInSecondIteration = (timeElapsedIteration / 1_000_000) / 1_000.0;
+					if (!updated.containsAll(failInteraction))
+						failCount++;
 
-				int configurationCount = finder.getConfigurationCount() - sample.size();
-				System.out.println("#configs: " + configurationCount);
+					writer.createNewLine();
+					writer.addValue(modelName);
+					writer.addValue(interactionSize);
+					writer.addValue(i + 1);
+					writer.addValue(str(verifier.interaction));
+					writer.addValue(updated.containsAll(failInteraction) ? "OK" : "FAIL");
+					writer.addValue(foundInteraction.size());
+					writer.addValue(updated.size());
+					writer.addValue(merged.size());
+					writer.addValue(str(foundInteraction));
+					writer.addValue(updated);
+					writer.addValue(merged);
+					writer.addValue(configurationCount);
+//					writer.addValue(toStr(finder.getInteractionCounter()));
+					writer.addValue(elapsedTimeInSecondIteration);
+					writer.flush();
+				}
+				System.out.println("Fails: " + failCount);
+				System.out.println(
+						"#Configs: " + configCounts.stream().mapToInt(Integer::intValue).average().getAsDouble());
 
-				long finishIterationTime = System.nanoTime();
-				long timeElapsedIteration = finishIterationTime - startIterationTime;
-				double elapsedTimeInSecondIteration = (timeElapsedIteration / 1_000_000) / 1_000.0;
-//			System.out.println("Time: " + timeElapsedIteration);
-
-//			String message;
-//			if (foundInteraction.contains(failInteraction)) { // failInteraction.equals(foundInteraction)
-//				message = "%d/%d %s   %s > %s %n";
-//			} else {
-//				failCount++;
-//				message = "%d/%d FAIL %s > %s %n";
-//			}
-
-				System.out.println(String.format("%d/%d %s   %s > %s %n", (i + 1), iterations,
-						foundInteraction.contains(failInteraction) ? "OK" : "FAIL", str(verifier.interaction),
-						str(foundInteraction)));
-
-				writer.createNewLine();
-				writer.addValue(modelName);
-				writer.addValue((i + 1));
-				writer.addValue(iterations);
-				writer.addValue(foundInteraction.contains(failInteraction) ? "OK" : "FAIL");
-				writer.addValue(str(verifier.interaction));
-				writer.addValue(str(foundInteraction));
-				writer.addValue(foundInteractionListLength);
-				writer.addValue(configurationCount);
-				writer.addValue(toStr(finder.getInteractionCounter()));
-				writer.addValue(elapsedTimeInSecondIteration);
-				writer.flush();
-//			String message = "%d;%d;%s;%s;%s;%s;%s;%f;%n";
-//			results[i] = String.format(message, //
-//					(i + 1), //
-//					iterations, //
-//					foundInteraction.contains(failInteraction) ? "OK" : "FAIL", //
-//					str(verifier.interaction), //
-//					str(foundInteraction), //
-//					foundInteractionListLength, //
-//					configurationCount, //
-//					elapsedTimeInSecondIteration);
+				long finishTime = System.nanoTime();
+				long timeElapsed = finishTime - startTimeLoadModel;
+				System.out.println("Time: " + timeElapsed);
+				double elapsedTimeInSecond = (timeElapsed / 1_000_000) / 1_000.0;
+				System.out.println(elapsedTimeInSecond + " seconds");
 			}
-			System.out.println("Fails: " + failCount);
-
-			long finishTime = System.nanoTime();
-			long timeElapsed = finishTime - startTimeLoadModel;
-			System.out.println("Time: " + timeElapsed);
-			double elapsedTimeInSecond = (timeElapsed / 1_000_000) / 1_000.0;
-			System.out.println(elapsedTimeInSecond + " seconds");
 		}
 	}
 
@@ -346,9 +321,9 @@ public class InteractionFinderTest {
 
 	public static ConfigurationCompletor createCompletor(ModelRepresentation rep, Random random) {
 		RandomConfigurationGenerator randomGenerator = new FastRandomConfigurationGenerator();
-		randomGenerator.setAllowDuplicates(false);
+		randomGenerator.setAllowDuplicates(true);
 		randomGenerator.setRandom(random);
-//		randomGenerator.init(rep, new NullMonitor());
+		randomGenerator.init(rep.getCache(), new NullMonitor());
 		return new ConfigurationCompletor(rep, randomGenerator);
 	}
 
@@ -383,65 +358,5 @@ public class InteractionFinderTest {
 		generator.setLimit(1);
 		return generator;
 	}
-
-//	private static LiteralList chooseInteraction(Random random, List<LiteralList> sample, int interactionSize,
-//			LiteralList coreDead) {
-//		final LiteralList solution = sample.get(random.nextInt(sample.size()));
-//
-//		return new LiteralList(Stream.generate(() -> (random.nextInt(solution.size()))) //
-//				.mapToInt(Integer::intValue) //
-//				.distinct() //
-//				.limit(interactionSize) //
-//				.map(l -> solution.get(l)) //
-//				.toArray());
-//	}
-
-//	public static SolutionUpdater createRandomCompletor(ModelRepresentation rep) {
-//	return new SimpleRandomConfigurationGenerator(rep.getVariables().size());
-//}
-
-//	private static List<LiteralList> createRandomSample(ModelRepresentation rep, int size) {
-//	return createRandomSample(rep, size, new Random(0));
-//}
-
-//private static List<LiteralList> createRandomSample(ModelRepresentation rep, int size, Random random) {
-//	RandomConfigurationGenerator generator = new FastRandomConfigurationGenerator();
-//	generator.setAllowDuplicates(false);
-//	generator.setRandom(random);
-//	generator.setLimit(size);
-//	return rep.getResult(generator).map(SolutionList::getSolutions).orElse(Logger::logProblems);
-//}
-
-//private static List<LiteralList> createTWiseSample(ModelRepresentation rep, int t) {
-//	TWiseConfigurationGenerator generator = new TWiseConfigurationGenerator();
-//	generator.setRandom(new Random(0));
-//	generator.setT(t);
-//	return rep.getResult(generator).map(SolutionList::getSolutions).orElse(Logger::logProblems);
-//}
-
-//	private static class SimpleRandomConfigurationGenerator implements SolutionUpdater {
-//	private final int configurationSize;
-//	private Random random;
-//
-//	public SimpleRandomConfigurationGenerator(int configurationSize, Random random) {
-//		this.configurationSize = configurationSize;
-//		this.random = random;
-//	}
-//
-//	@Override
-//	public Optional<LiteralList> complete(LiteralList partial) {
-//		final int[] assignment = new int[configurationSize];
-//		for (int i = 0; i < assignment.length; i++) {
-//			assignment[i] = random.nextBoolean() ? (i + 1) : -(i + 1);
-//		}
-//		if (partial != null) {
-//			for (int i = 0; i < partial.size(); i++) {
-//				int fixedLiteral = partial.get(i);
-//				assignment[Math.abs(fixedLiteral) - 1] = fixedLiteral;
-//			}
-//		}
-//		return Optional.of(new LiteralList(assignment, Order.INDEX, false));
-//	}
-//}
 
 }
