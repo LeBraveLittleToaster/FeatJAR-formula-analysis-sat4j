@@ -21,6 +21,8 @@
 package de.featjar.analysis.sat4j;
 
 import de.featjar.analysis.solver.RuntimeContradictionException;
+import de.featjar.analysis.solver.RuntimeTimeoutException;
+import de.featjar.analysis.solver.SatSolver.SatResult;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.job.InternalMonitor;
 import java.util.Random;
@@ -52,19 +54,26 @@ public abstract class RandomConfigurationGenerator extends AbstractConfiguration
         }
         reset();
         solver.shuffleOrder(random);
-        final LiteralList solution = solver.findSolution();
-        if (solution == null) {
-            satisfiable = false;
-            return null;
-        }
-        if (!allowDuplicates) {
-            try {
-                forbidSolution(solution.negate());
-            } catch (final RuntimeContradictionException e) {
+        final SatResult hasSolution = solver.hasSolution();
+        switch (hasSolution) {
+            case FALSE:
                 satisfiable = false;
-            }
+                return null;
+            case TIMEOUT:
+                throw new RuntimeTimeoutException();
+            case TRUE:
+                final LiteralList solution = solver.getSolution();
+                if (!allowDuplicates) {
+                    try {
+                        forbidSolution(solution.negate());
+                    } catch (final RuntimeContradictionException e) {
+                        satisfiable = false;
+                    }
+                }
+                return solution;
+            default:
+                throw new IllegalStateException(String.valueOf(hasSolution));
         }
-        return solution;
     }
 
     protected void forbidSolution(final LiteralList negate) {

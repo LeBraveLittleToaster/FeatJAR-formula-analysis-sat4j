@@ -30,6 +30,7 @@ import de.featjar.analysis.sat4j.twise.TWiseStatisticGenerator;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.Clauses;
+import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.clauses.solutions.metrics.SampleMetric;
 import java.util.ArrayList;
@@ -53,6 +54,10 @@ public class TWiseCoverageMetrics {
 
         @Override
         public double get(SolutionList sample) {
+            return get(sample.getSolutions());
+        }
+
+        public double get(List<LiteralList> sample) {
             final TWiseStatisticGenerator tWiseStatisticGenerator = new TWiseStatisticGenerator(util);
             if (firstUse) {
                 firstUse = false;
@@ -62,7 +67,7 @@ public class TWiseCoverageMetrics {
 
             final CoverageStatistic statistic = tWiseStatisticGenerator
                     .getCoverage(
-                            Arrays.asList(sample.getSolutions()), //
+                            Arrays.asList(sample), //
                             presenceConditionManager.getGroupedPresenceConditions(), //
                             t, //
                             TWiseStatisticGenerator.ConfigurationScore.NONE, //

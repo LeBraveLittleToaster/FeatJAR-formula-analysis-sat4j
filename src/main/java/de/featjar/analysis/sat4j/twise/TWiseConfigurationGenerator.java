@@ -222,7 +222,7 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
         try {
             for (int i = 0; i < iterations; i++) {
                 trimConfigurations();
-                buildCombinations();
+                buildCombinations(monitor);
             }
             Collections.reverse(bestResult);
         } finally {
@@ -271,7 +271,7 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
         return index;
     }
 
-    private void buildCombinations() {
+    private void buildCombinations(InternalMonitor monitor) {
         // TODO Variation Point: Cover Strategies
         final List<? extends ICoverStrategy> phaseList = Arrays.asList( //
                 new CoverAll(util) //
@@ -289,6 +289,8 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
             it = new MergeIterator3(t, util.getCnf().getVariableMap().getVariableCount(), groupedPresenceConditions);
         }
         numberOfCombinations = it.size();
+        monitor.setTotalWork(numberOfCombinations);
+        UpdateThread monitorThread = Logger.startMonitorLogger(monitor);
 
         coveredCount = 0;
         invalidCount = 0;
@@ -298,6 +300,7 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
         phaseCount++;
         ICoverStrategy phase = phaseList.get(0);
         while (true) {
+            monitor.step();
             final ClauseList combinedCondition = it.get();
             if (combinedCondition == null) {
                 break;
@@ -357,6 +360,7 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
             bestResult = new ArrayList<>(curResult.size());
             curResult.stream().map(TWiseConfiguration::clone).forEach(bestResult::add);
         }
+        monitorThread.finish();
     }
 
     public boolean printStatus() {

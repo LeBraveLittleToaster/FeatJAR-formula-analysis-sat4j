@@ -54,35 +54,35 @@ public class CoverageStatistic {
         return configScores;
     }
 
-    protected void setNumberOfValidConditions(long numberOfValidConditions) {
+    public void setNumberOfValidConditions(long numberOfValidConditions) {
         this.numberOfValidConditions = numberOfValidConditions;
     }
 
-    protected void setNumberOfInvalidConditions(long numberOfInvalidConditions) {
+    public void setNumberOfInvalidConditions(long numberOfInvalidConditions) {
         this.numberOfInvalidConditions = numberOfInvalidConditions;
     }
 
-    protected void setNumberOfCoveredConditions(long numberOfCoveredConditions) {
+    public void setNumberOfCoveredConditions(long numberOfCoveredConditions) {
         this.numberOfCoveredConditions = numberOfCoveredConditions;
     }
 
-    protected void setNumberOfUncoveredConditions(long numberOfUncoveredConditions) {
+    public void setNumberOfUncoveredConditions(long numberOfUncoveredConditions) {
         this.numberOfUncoveredConditions = numberOfUncoveredConditions;
     }
 
-    protected void incNumberOfValidConditions() {
+    public void incNumberOfValidConditions() {
         numberOfValidConditions++;
     }
 
-    protected void incNumberOfInvalidConditions() {
+    public void incNumberOfInvalidConditions() {
         numberOfInvalidConditions++;
     }
 
-    protected void incNumberOfCoveredConditions() {
+    public void incNumberOfCoveredConditions() {
         numberOfCoveredConditions++;
     }
 
-    protected void incNumberOfUncoveredConditions() {
+    public void incNumberOfUncoveredConditions() {
         numberOfUncoveredConditions++;
     }
 

@@ -130,7 +130,8 @@ public class Sat4JSolver extends AbstractSat4JSolver<Solver<?>> {
             case InverseFixed:
                 setSelectionStrategy(
                         new FixedOrderHeap( //
-                                new ReverseFixedLiteralSelectionStrategy(((InverseFixedStrategy) strategy).getModel()), //
+                                new ReverseFixedLiteralSelectionStrategy(
+                                        ((InverseFixedStrategy) strategy).getModel()), //
                                 order));
                 break;
             case MIGRandom:

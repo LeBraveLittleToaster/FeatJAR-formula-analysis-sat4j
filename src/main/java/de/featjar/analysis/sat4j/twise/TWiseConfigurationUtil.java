@@ -65,7 +65,7 @@ public class TWiseConfigurationUtil {
         Use
     }
 
-    public static final int GLOBAL_SOLUTION_LIMIT = 100_000;
+    public static final int GLOBAL_SOLUTION_LIMIT = 10_000;
 
     static final Comparator<Pair<LiteralList, TWiseConfiguration>> candidateLengthComparator =
             new CandidateLengthComparator();
@@ -78,7 +78,7 @@ public class TWiseConfigurationUtil {
 
     private final List<TWiseConfiguration> incompleteSolutionList = new LinkedList<>();
     private final List<TWiseConfiguration> completeSolutionList = new ArrayList<>();
-    private final HashSet<LiteralList> invalidClauses = new HashSet<>();
+    public final HashSet<LiteralList> invalidClauses = new HashSet<>();
     private InvalidClausesList invalidClausesList = InvalidClausesList.None;
 
     protected final CNF cnf;
@@ -86,7 +86,7 @@ public class TWiseConfigurationUtil {
     protected final boolean hasSolver;
 
     protected MIG mig;
-    protected LiteralList[] strongHull;
+    public LiteralList[] strongHull;
     protected LiteralList coreDead;
 
     protected int maxSampleSize = Integer.MAX_VALUE;
@@ -97,6 +97,7 @@ public class TWiseConfigurationUtil {
     public TWiseConfigurationUtil(CNF cnf, Sat4JSolver localSolver) {
         this.cnf = cnf;
         this.localSolver = localSolver;
+        localSolver.setTimeout(10_000);
         hasSolver = localSolver != null;
 
         randomSample = Collections.emptyList();
@@ -106,6 +107,7 @@ public class TWiseConfigurationUtil {
         final FastRandomConfigurationGenerator randomGenerator = new FastRandomConfigurationGenerator();
         randomGenerator.setAllowDuplicates(true);
         randomGenerator.setRandom(random);
+        randomGenerator.setTimeout(10_000);
         randomGenerator.setLimit(randomSampleSize);
         randomSample = Executor.run(randomGenerator::execute, cnf) //
                 .map(SolutionList::getSolutions) //
@@ -155,8 +157,6 @@ public class TWiseConfigurationUtil {
 
     public LiteralList computeDeadCoreFeaturesMig() {
         if (hasSolver()) {
-            coreDead = new LiteralList();
-        } else {
             final int[] coreDeadArray = new int[cnf.getVariableMap().getVariableCount()];
             int index = 0;
             for (final Vertex vertex : mig.getVertices()) {
@@ -168,6 +168,8 @@ public class TWiseConfigurationUtil {
             if (!coreDead.isEmpty()) {
                 localSolver.getAssumptions().pushAll(coreDead.getLiterals());
             }
+        } else {
+            coreDead = new LiteralList();
         }
         return coreDead;
     }
@@ -265,7 +267,16 @@ public class TWiseConfigurationUtil {
     }
 
     public boolean isCombinationValid(LiteralList literals) {
-        return !isCombinationInvalidMIG(literals) && isCombinationValidSAT(literals);
+        return !invalidClauses.contains(literals)
+                && !isCombinationInvalidMIG(literals)
+                && isCombinationValidSample(literals)
+                && isCombinationValidSAT(literals);
+    }
+
+    public boolean isCombinationProbablyInvalid(LiteralList literals) {
+        return invalidClauses.contains(literals)
+                || isCombinationInvalidMIG(literals)
+                || !isCombinationValidSample(literals);
     }
 
     public boolean isCombinationValid(ClauseList clauses) {
@@ -289,6 +300,13 @@ public class TWiseConfigurationUtil {
                 }
             }
             for (final LiteralList literalSet : clauses) {
+                for (final LiteralList s : randomSample) {
+                    if (!s.hasConflicts(literalSet)) {
+                        return true;
+                    }
+                }
+            }
+            for (final LiteralList literalSet : clauses) {
                 if (isCombinationValidSAT(literalSet)) {
                     return true;
                 } else {
@@ -303,38 +321,50 @@ public class TWiseConfigurationUtil {
     }
 
     public boolean isCombinationInvalidMIG(LiteralList literals) {
+        return isCombinationInvalidMIG(literals.getLiterals());
+    }
+
+    public boolean isCombinationInvalidMIG(int[] literals) {
         if (hasMig()) {
-            for (final int literal : literals.getLiterals()) {
+            for (final int literal : literals) {
                 if (strongHull[MIG.getVertexIndex(literal)].hasConflicts(literals)) {
                     return true;
                 }
             }
         }
+        //        if (invalidClausesList == InvalidClausesList.Create) {
+        //            invalidClauses.add(literals);
+        //        }
         return false;
     }
 
     public boolean isCombinationValidSAT(LiteralList literals) {
+        return isCombinationValidSAT(literals.getLiterals());
+    }
+
+    public boolean isCombinationValidSAT(int[] literals) {
         if (hasSolver()) {
-            for (final LiteralList s : randomSample) {
-                if (!s.hasConflicts(literals)) {
-                    return true;
-                }
-            }
+            //            if (isCombinationValidSample(literals)) {
+            //            	return true;
+            //            }
 
             final Sat4JSolver solver = getSolver();
-            //			solver.setSelectionStrategy(SStrategy.random(getRandom()));
+            // solver.setSelectionStrategy(SStrategy.random(getRandom()));
             final int orgAssignmentLength = solver.getAssumptions().size();
             try {
-                solver.getAssumptions().pushAll(literals.getLiterals());
+                solver.getAssumptions().pushAll(literals);
                 final SatSolver.SatResult hasSolution = solver.hasSolution();
                 switch (hasSolution) {
                     case TRUE:
-                        final int[] solution = solver.getInternalSolution();
-                        addSolverSolution(Arrays.copyOf(solution, solution.length));
-                        solver.shuffleOrder(random);
+                        //                        final int[] solution = solver.getInternalSolution();
+                        //                        addSolverSolution(Arrays.copyOf(solution, solution.length));
+                        //                        solver.shuffleOrder(random);
                         break;
                     case FALSE:
                     case TIMEOUT:
+                        //					if (invalidClausesList == InvalidClausesList.Create) {
+                        //						invalidClauses.add(literals);
+                        //					}
                         return false;
                     default:
                         break;
@@ -346,31 +376,25 @@ public class TWiseConfigurationUtil {
         return true;
     }
 
+    public boolean isCombinationValidSample(int[] literals) {
+        for (final LiteralList s : randomSample) {
+            if (!s.hasConflicts(literals)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isCombinationValidSample(LiteralList literals) {
+        return isCombinationValidSample(literals.getLiterals());
+    }
+
     public boolean removeInvalidClauses(
             ClauseList nextCondition, List<Pair<LiteralList, TWiseConfiguration>> candidatesList) {
         final LinkedList<LiteralList> invalidClauses = new LinkedList<>();
         for (final Iterator<LiteralList> conditionIterator = nextCondition.iterator(); conditionIterator.hasNext(); ) {
             final LiteralList literals = conditionIterator.next();
             if (!isCombinationValid(literals)) {
-                invalidClauses.add(literals);
-                conditionIterator.remove();
-            }
-        }
-        if (nextCondition.isEmpty()) {
-            candidatesList.clear();
-            return true;
-        } else {
-            removeInvalidCandidates(candidatesList, invalidClauses);
-            return false;
-        }
-    }
-
-    public boolean removeInvalidClausesSat(
-            ClauseList nextCondition, List<Pair<LiteralList, TWiseConfiguration>> candidatesList) {
-        final LinkedList<LiteralList> invalidClauses = new LinkedList<>();
-        for (final Iterator<LiteralList> conditionIterator = nextCondition.iterator(); conditionIterator.hasNext(); ) {
-            final LiteralList literals = conditionIterator.next();
-            if (!isCombinationValidSAT(literals)) {
                 invalidClauses.add(literals);
                 conditionIterator.remove();
             }
@@ -449,7 +473,7 @@ public class TWiseConfigurationUtil {
     private boolean isSelectionPossibleSat(final LiteralList literals, final TWiseConfiguration configuration) {
         if (hasSolver) {
             final Sat4JSolver localSolver = getSolver();
-            //			localSolver.setSelectionStrategy(SStrategy.random());
+            // localSolver.setSelectionStrategy(SStrategy.random());
             final int orgAssignmentSize = configuration.setUpSolver(localSolver);
             try {
                 final int[] configurationLiterals = configuration.getLiterals();
