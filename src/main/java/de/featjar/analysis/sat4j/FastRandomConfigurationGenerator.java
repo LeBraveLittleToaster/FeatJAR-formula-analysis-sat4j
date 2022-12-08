@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.analysis.sat4j;
 
@@ -51,6 +51,5 @@ public class FastRandomConfigurationGenerator extends RandomConfigurationGenerat
     protected void resetSolver(Sat4JSolver solver) {
         super.resetSolver(solver);
         solver.setSelectionStrategy(originalSelectionStrategy);
-        originalSelectionStrategy = null;
     }
 }

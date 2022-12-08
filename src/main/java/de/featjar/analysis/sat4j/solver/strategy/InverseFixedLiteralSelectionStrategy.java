@@ -16,16 +16,16 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.analysis.sat4j.solver.strategy;
 
 import static org.sat4j.core.LiteralsUtils.negLit;
 import static org.sat4j.core.LiteralsUtils.posLit;
 
-public class ReverseFixedLiteralSelectionStrategy extends FixedLiteralSelectionStrategy {
+public class InverseFixedLiteralSelectionStrategy extends FixedLiteralSelectionStrategy {
 
-    public ReverseFixedLiteralSelectionStrategy(int[] model) {
+    public InverseFixedLiteralSelectionStrategy(int[] model) {
         super(model);
     }
 

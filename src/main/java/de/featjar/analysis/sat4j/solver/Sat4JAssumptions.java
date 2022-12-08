@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.analysis.sat4j.solver;
 
@@ -115,16 +115,24 @@ public class Sat4JAssumptions implements Assignment {
     }
 
     @Override
-    public void set(int index, Object assignment) {
+    public void set(int variable, Object assignment) {
         if (assignment instanceof Boolean) {
             for (int i = 0; i < assumptions.size(); i++) {
-                final int l = assumptions.unsafeGet(i);
-                if (Math.abs(l) == index) {
-                    assumptions.set(i, (Boolean) assignment ? l : -l);
+                final int var = Math.abs(assumptions.unsafeGet(i));
+                if (var == variable) {
+                    assumptions.set(i, (Boolean) assignment ? var : -var);
                     return;
                 }
             }
-            assumptions.push((Boolean) assignment ? index : -index);
+            assumptions.push((Boolean) assignment ? variable : -variable);
+        } else if (assignment == null) {
+            for (int i = 0; i < assumptions.size(); i++) {
+                final int var = Math.abs(assumptions.unsafeGet(i));
+                if (var == variable) {
+                    assumptions.delete(i);
+                    return;
+                }
+            }
         }
     }
 

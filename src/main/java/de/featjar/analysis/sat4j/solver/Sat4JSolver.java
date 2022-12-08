@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.analysis.sat4j.solver;
 
@@ -27,8 +27,8 @@ import de.featjar.analysis.sat4j.solver.SStrategy.UniformRandomStrategy;
 import de.featjar.analysis.sat4j.solver.strategy.FixedLiteralSelectionStrategy;
 import de.featjar.analysis.sat4j.solver.strategy.FixedOrderHeap;
 import de.featjar.analysis.sat4j.solver.strategy.FixedOrderHeap2;
+import de.featjar.analysis.sat4j.solver.strategy.InverseFixedLiteralSelectionStrategy;
 import de.featjar.analysis.sat4j.solver.strategy.RandomSelectionStrategy;
-import de.featjar.analysis.sat4j.solver.strategy.ReverseFixedLiteralSelectionStrategy;
 import de.featjar.analysis.sat4j.solver.strategy.UniformRandomSelectionStrategy;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.LiteralList;
@@ -130,7 +130,7 @@ public class Sat4JSolver extends AbstractSat4JSolver<Solver<?>> {
             case InverseFixed:
                 setSelectionStrategy(
                         new FixedOrderHeap( //
-                                new ReverseFixedLiteralSelectionStrategy(
+                                new InverseFixedLiteralSelectionStrategy(
                                         ((InverseFixedStrategy) strategy).getModel()), //
                                 order));
                 break;

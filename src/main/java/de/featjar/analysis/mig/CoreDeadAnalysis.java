@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.analysis.mig;
 
@@ -29,6 +29,7 @@ import de.featjar.analysis.sat4j.solver.SStrategy;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.data.Identifier;
 import de.featjar.util.job.InternalMonitor;
+import java.util.stream.IntStream;
 import org.sat4j.core.VecInt;
 
 /**
@@ -36,21 +37,16 @@ import org.sat4j.core.VecInt;
  *
  * @author Sebastian Krieter
  */
-public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralList> {
+public class CoreDeadAnalysis extends Sat4JMIGAnalysis<LiteralList> {
 
     public static final Identifier<LiteralList> identifier = new Identifier<>();
 
     protected int[] fixedVariables;
-    protected int[] variableOrder;
     protected int newCount;
 
     public void setFixedFeatures(int[] fixedVariables, int newCount) {
         this.fixedVariables = fixedVariables;
         this.newCount = newCount;
-    }
-
-    public void setVariableOrder(int[] variableOrder) {
-        this.variableOrder = variableOrder;
     }
 
     public void resetFixedFeatures() {
@@ -63,7 +59,7 @@ public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralLi
         return identifier;
     }
 
-    public ConditionallyCoreDeadAnalysisMIG() {
+    public CoreDeadAnalysis() {
         super();
         resetFixedFeatures();
     }
@@ -109,20 +105,6 @@ public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralLi
             monitor.step();
         }
 
-        if (variableOrder != null) {
-            final VecInt sortedValuesToCalculate = new VecInt(valuesToCompute.size());
-            for (int i = variableOrder.length - 1; i >= 0; i--) {
-                final int var = variableOrder[i];
-                if (valuesToCompute.contains(var)) {
-                    sortedValuesToCalculate.push(var);
-                }
-                if (valuesToCompute.contains(-var)) {
-                    sortedValuesToCalculate.push(-var);
-                }
-            }
-            valuesToCompute = sortedValuesToCalculate;
-        }
-
         for (final int var : knownValues) {
             if (var != 0) {
                 solver.getAssumptions().push(var);
@@ -132,26 +114,25 @@ public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralLi
 
         if (!valuesToCompute.isEmpty()) {
             solver.setSelectionStrategy(SStrategy.positive());
-            final int[] unknownValues = solver.findSolution().getLiterals();
+            final int[] possibleValues = solver.findSolution().getLiterals();
             monitor.step();
 
-            if (unknownValues != null) {
-                solver.setSelectionStrategy(SStrategy.negative());
+            if (possibleValues != null) {
+                solver.setSelectionStrategy(SStrategy.inverse(possibleValues));
                 final int[] model2 = solver.findSolution().getLiterals();
                 monitor.step();
 
-                LiteralList.resetConflicts(unknownValues, model2);
-                solver.setSelectionStrategy(SStrategy.inverse(unknownValues));
+                LiteralList.resetConflicts(possibleValues, model2);
 
-                for (int k = 0; k < knownValues.length; k++) {
+                IntStream.range(0, knownValues.length).parallel().forEach(k -> {
                     final int var = knownValues[k];
-                    if ((var != 0) && (unknownValues[k] != 0)) {
-                        unknownValues[k] = 0;
+                    if ((var != 0) && (possibleValues[k] != 0)) {
+                        possibleValues[k] = 0;
                     }
-                }
+                });
                 monitor.step();
 
-                sat(solver, unknownValues, valuesToCompute, monitor, traverser);
+                sat(solver, possibleValues, valuesToCompute, monitor, traverser);
             }
         }
         return new LiteralList(
@@ -160,7 +141,7 @@ public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralLi
 
     private void sat(
             Sat4JMIGSolver solver,
-            int[] unknownValues,
+            int[] possibleValues,
             VecInt valuesToCalculate,
             InternalMonitor monitor,
             Traverser traverser) {
@@ -171,30 +152,30 @@ public class ConditionallyCoreDeadAnalysisMIG extends Sat4JMIGAnalysis<LiteralLi
             final int varX = valuesToCalculate.last();
             valuesToCalculate.pop();
             final int i = Math.abs(varX) - 1;
-            if (unknownValues[i] == varX) {
+            if (possibleValues[i] == varX) {
                 solver.getAssumptions().push(-varX);
                 switch (solver.hasSolution()) {
                     case FALSE:
                         solver.getAssumptions().replaceLast(varX);
-                        unknownValues[i] = 0;
+                        possibleValues[i] = 0;
                         monitor.step();
                         traverser.traverseStrong(varX);
                         final VecInt newFoundValues = visitor.getResult()[0];
                         for (int j = 0; j < newFoundValues.size(); j++) {
                             final int var = newFoundValues.get(j);
                             solver.getAssumptions().push(var);
-                            unknownValues[Math.abs(var) - 1] = 0;
+                            possibleValues[Math.abs(var) - 1] = 0;
                             monitor.step();
                         }
                         break;
                     case TIMEOUT:
                         solver.getAssumptions().pop();
-                        unknownValues[Math.abs(varX) - 1] = 0;
+                        possibleValues[Math.abs(varX) - 1] = 0;
                         monitor.step();
                         break;
                     case TRUE:
                         solver.getAssumptions().pop();
-                        LiteralList.resetConflicts(unknownValues, solver.getInternalSolution());
+                        LiteralList.resetConflicts(possibleValues, solver.getInternalSolution());
                         solver.shuffleOrder(getRandom());
                         break;
                 }

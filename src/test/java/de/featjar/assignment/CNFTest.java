@@ -16,19 +16,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with formula-analysis-sat4j. If not, see <https://www.gnu.org/licenses/>.
  *
- * See <https://github.com/FeatJAR/formula-analysis-sat4j> for further information.
+ * See <https://github.com/FeatureIDE/FeatJAR-formula-analysis-sat4j> for further information.
  */
 package de.featjar.assignment;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 import de.featjar.analysis.Analysis;
-import de.featjar.analysis.mig.ConditionallyCoreDeadAnalysisMIG;
+import de.featjar.analysis.mig.CoreDeadAnalysis;
 import de.featjar.analysis.sat4j.AddRedundancyAnalysis;
 import de.featjar.analysis.sat4j.AtomicSetAnalysis;
 import de.featjar.analysis.sat4j.CauseAnalysis;
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
-import de.featjar.analysis.sat4j.CoreDeadAnalysis;
 import de.featjar.analysis.sat4j.CountSolutionsAnalysis;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
 import de.featjar.analysis.sat4j.IndependentContradictionAnalysis;
@@ -84,7 +83,7 @@ public class CNFTest {
         executeAnalysis(rep, new IndependentRedundancyAnalysis());
         executeAnalysis(rep, new IndeterminateAnalysis());
         executeAnalysis(rep, new RemoveRedundancyAnalysis());
-        executeAnalysis(rep, new ConditionallyCoreDeadAnalysisMIG());
+        executeAnalysis(rep, new CoreDeadAnalysis());
 
         final CNF cnf = rep.get(CNFProvider.fromFormula());
         final CNFSlicer slicer = new CNFSlicer(new LiteralList(2));
