@@ -20,7 +20,6 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.LiteralList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +41,7 @@ public class TWiseCombiner {
      * @return a grouped expression list (can be used as an input for the
      *         configuration generator).
      */
-    public static List<List<ClauseList>> convertLiterals(LiteralList literalSet) {
+    public static List<List<List<LiteralList>>> convertLiterals(LiteralList literalSet) {
         return convertGroupedLiterals(Arrays.asList(literalSet));
     }
 
@@ -53,13 +52,13 @@ public class TWiseCombiner {
      * @return a grouped expression list (can be used as an input for the
      *         configuration generator).
      */
-    public static List<List<ClauseList>> convertGroupedLiterals(List<LiteralList> groupedLiterals) {
-        final List<List<ClauseList>> groupedExpressions = new ArrayList<>(groupedLiterals.size());
+    public static List<List<List<LiteralList>>> convertGroupedLiterals(List<LiteralList> groupedLiterals) {
+        final List<List<List<LiteralList>>> groupedExpressions = new ArrayList<>(groupedLiterals.size());
         for (final LiteralList literalSet : groupedLiterals) {
-            final List<ClauseList> arrayList = new ArrayList<>(literalSet.size());
+            final List<List<LiteralList>> arrayList = new ArrayList<>(literalSet.size());
             groupedExpressions.add(arrayList);
             for (final Integer literal : literalSet.getLiterals()) {
-                final ClauseList clauseList = new ClauseList(1);
+                final List<LiteralList> clauseList = new ArrayList<>(1);
                 clauseList.add(new LiteralList(literal));
                 arrayList.add(clauseList);
             }
@@ -75,7 +74,7 @@ public class TWiseCombiner {
      * @return a grouped expression list (can be used as an input for the
      *         configuration generator).
      */
-    public static List<List<ClauseList>> convertExpressions(List<ClauseList> expressions) {
+    public static List<List<List<LiteralList>>> convertExpressions(List<List<LiteralList>> expressions) {
         return Arrays.asList(expressions);
     }
 
@@ -86,11 +85,11 @@ public class TWiseCombiner {
         features = new int[numberOfVariables + 1];
     }
 
-    public boolean combineConditions(ClauseList[] conditionArray, ClauseList combinedCondition) {
+    public boolean combineConditions(List<LiteralList>[] conditionArray, List<LiteralList> combinedCondition) {
         return combineConditions(conditionArray, 0, combinedCondition);
     }
 
-    private boolean combineConditions(ClauseList[] conditionArray, int t, ClauseList combinedCondition) {
+    private boolean combineConditions(List<LiteralList>[] conditionArray, int t, List<LiteralList> combinedCondition) {
         if (t == conditionArray.length) {
             final int[] combinedLiteralsArray = Arrays.copyOfRange(lits.toArray(), 0, lits.size());
             combinedCondition.add(new LiteralList(combinedLiteralsArray));
@@ -139,7 +138,7 @@ public class TWiseCombiner {
         return true;
     }
 
-    private boolean combineIteratively(PresenceCondition[] conditionArray, ClauseList combinedCondition) {
+    private boolean combineIteratively(List<LiteralList>[] conditionArray, List<LiteralList> combinedCondition) {
         final int[] clauseIndex = new int[conditionArray.length];
         clauseIndex[0] = -1;
 
@@ -164,7 +163,7 @@ public class TWiseCombiner {
         return true;
     }
 
-    private LiteralList getCombinationLiterals(final int[] clauseIndex, final PresenceCondition[] clauseListArray) {
+    private LiteralList getCombinationLiterals(final int[] clauseIndex, final List<LiteralList>[] clauseListArray) {
         final TreeSet<Integer> newLiteralSet = new TreeSet<>();
         for (int j = 0; j < clauseIndex.length; j++) {
             for (final int literal : clauseListArray[j].get(clauseIndex[j]).getLiterals()) {
@@ -185,7 +184,7 @@ public class TWiseCombiner {
         return literalSet;
     }
 
-    private boolean combineConditions3(PresenceCondition[] conditionArray, int t, ClauseList combinedCondition) {
+    private boolean combineConditions3(List<LiteralList>[] conditionArray, int t, List<LiteralList> combinedCondition) {
         if (t == conditionArray.length) {
             final int[] combinedLiteralsArray = Arrays.copyOfRange(lits.toArray(), 0, lits.size());
             combinedCondition.add(new LiteralList(combinedLiteralsArray));
@@ -233,7 +232,7 @@ public class TWiseCombiner {
         return true;
     }
 
-    private boolean combineConditions2(PresenceCondition[] conditionArray, int t, ClauseList combinedCondition) {
+    private boolean combineConditions2(List<LiteralList>[] conditionArray, int t, List<LiteralList> combinedCondition) {
         if (t == conditionArray.length) {
             if (combinedCondition.size() >= 1) {
                 return false;

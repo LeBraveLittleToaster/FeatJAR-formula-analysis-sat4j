@@ -20,7 +20,8 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
+import de.featjar.clauses.LiteralList;
+import java.util.List;
 
 /**
  * A strategy for covering a given {@link ClauseList expressions} within a list
@@ -36,5 +37,5 @@ interface ICoverStrategy {
         INVALID,
     }
 
-    CombinationStatus cover(final ClauseList nextCondition);
+    CombinationStatus cover(final List<LiteralList> nextCondition);
 }

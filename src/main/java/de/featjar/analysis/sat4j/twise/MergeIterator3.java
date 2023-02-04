@@ -20,7 +20,7 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
+import de.featjar.clauses.LiteralList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,27 +30,27 @@ import java.util.List;
  *
  * @author Sebastian Krieter
  */
-public class MergeIterator3 implements ICombinationSupplier<ClauseList> {
+public class MergeIterator3 implements ICombinationSupplier<List<LiteralList>> {
 
-    private final List<List<PresenceCondition>> expressionSets;
+    private final List<List<List<LiteralList>>> expressionSets;
     private final ICombinationSupplier<int[]>[] suppliers;
     private final long numberOfCombinations;
 
-    private final List<ClauseList> buffer = new ArrayList<>();
+    private final List<List<LiteralList>> buffer = new ArrayList<>();
     private final TWiseCombiner combiner;
-    private final PresenceCondition[] nextCombination;
+    private final List<LiteralList>[] nextCombination;
 
     private int bufferIndex = 0;
     private final int maxIteratorIndex;
 
     @SuppressWarnings("unchecked")
-    public MergeIterator3(int t, int n, List<List<PresenceCondition>> expressionSets) {
+    public MergeIterator3(int t, int n, List<List<List<LiteralList>>> expressionSets) {
         this.expressionSets = expressionSets;
 
         maxIteratorIndex = expressionSets.size() - 1;
         suppliers = new ICombinationSupplier[expressionSets.size()];
         combiner = new TWiseCombiner(n);
-        nextCombination = new PresenceCondition[t];
+        nextCombination = new List[t];
 
         long sumNumberOfCombinations = 0;
         for (int i = 0; i <= maxIteratorIndex; i++) {
@@ -63,18 +63,18 @@ public class MergeIterator3 implements ICombinationSupplier<ClauseList> {
     }
 
     @Override
-    public ClauseList get() {
+    public List<LiteralList> get() {
         if (buffer.isEmpty()) {
             for (int i = 0; i <= maxIteratorIndex; i++) {
                 final ICombinationSupplier<int[]> supplier = suppliers[i];
                 if (supplier != null) {
                     final int[] js = supplier.get();
                     if (js != null) {
-                        final List<PresenceCondition> expressionSet = expressionSets.get(i);
+                        final List<List<LiteralList>> expressionSet = expressionSets.get(i);
                         for (int j = 0; j < js.length; j++) {
                             nextCombination[j] = expressionSet.get(js[j]);
                         }
-                        final ClauseList combinedCondition = new ClauseList();
+                        final List<LiteralList> combinedCondition = new ArrayList<>();
                         combiner.combineConditions(nextCombination, combinedCondition);
                         buffer.add(combinedCondition);
                     } else {
@@ -86,7 +86,7 @@ public class MergeIterator3 implements ICombinationSupplier<ClauseList> {
                 return null;
             }
         }
-        final ClauseList remove = buffer.get(bufferIndex++);
+        final List<LiteralList> remove = buffer.get(bufferIndex++);
         if (bufferIndex == buffer.size()) {
             buffer.clear();
             bufferIndex = 0;

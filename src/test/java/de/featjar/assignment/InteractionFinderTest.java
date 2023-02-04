@@ -29,7 +29,6 @@ import de.featjar.analysis.sat4j.FastRandomConfigurationGenerator;
 import de.featjar.analysis.sat4j.RandomConfigurationGenerator;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.CNFProvider;
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
@@ -356,7 +355,7 @@ public class InteractionFinderTest {
                     .toArray());
 
             CNF cnf = rep.get(CNFProvider.fromFormula());
-            ClauseList clauses = new ClauseList(cnf.getClauses());
+            List<LiteralList> clauses = new ArrayList<>(cnf.getClauses());
             clauses.add(interaction.negate());
             LiteralList solution2 = getConfigGenerator(random)
                     .execute(new CNF(cnf.getVariableMap(), clauses), new NullMonitor())

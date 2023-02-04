@@ -20,7 +20,6 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.data.Pair;
 import java.util.ArrayList;
@@ -57,8 +56,8 @@ public class TWiseStatisticGenerator {
     }
 
     public List<CoverageStatistic> getCoverage(
-            List<List<? extends LiteralList>> samples,
-            List<List<PresenceCondition>> groupedPresenceConditions,
+            List<List<LiteralList>> samples,
+            List<List<List<LiteralList>>> groupedPresenceConditions,
             int t,
             ConfigurationScore configurationScoreType,
             boolean identifyValidCombinations) {
@@ -66,13 +65,13 @@ public class TWiseStatisticGenerator {
 
         final TWiseCombiner combiner =
                 new TWiseCombiner(util.getCnf().getVariableMap().getVariableCount());
-        final ClauseList combinedCondition = new ClauseList();
-        final PresenceCondition[] clauseListArray = new PresenceCondition[t];
+        final List<LiteralList> combinedCondition = new ArrayList<>();
+        final List<LiteralList>[] clauseListArray = new List[t];
         final ArrayList<ArrayList<List<Pair<Integer, LiteralList>>>> configurationSubLists =
                 new ArrayList<>(sampleListSize);
 
         final List<CoverageStatistic> statisticList = new ArrayList<>(sampleListSize);
-        for (final List<? extends LiteralList> sample : samples) {
+        for (final List<LiteralList> sample : samples) {
             final CoverageStatistic statistic = new CoverageStatistic();
             if (configurationScoreType != ConfigurationScore.NONE) {
                 statistic.initScores(sample.size());
@@ -92,12 +91,12 @@ public class TWiseStatisticGenerator {
             }
         }
 
-        for (List<PresenceCondition> expressions : groupedPresenceConditions) {
+        for (List<List<LiteralList>> expressions : groupedPresenceConditions) {
             if (expressions.size() < t) {
                 if (expressions.size() == 0) {
                     continue;
                 }
-                final ArrayList<PresenceCondition> paddedExpressions = new ArrayList<>(t);
+                final ArrayList<List<LiteralList>> paddedExpressions = new ArrayList<>(t);
                 paddedExpressions.addAll(expressions);
                 for (int i = expressions.size(); i < t; i++) {
                     paddedExpressions.add(expressions.get(0));
@@ -152,7 +151,7 @@ public class TWiseStatisticGenerator {
                                 final List<Pair<Integer, LiteralList>> prevList = lists.get(j - 1);
                                 final List<Pair<Integer, LiteralList>> curList = lists.get(j);
                                 curList.clear();
-                                final PresenceCondition presenceCondition = expressions.get(c[j]);
+                                final List<LiteralList> presenceCondition = expressions.get(c[j]);
                                 entryLoop:
                                 for (final Pair<Integer, LiteralList> entry : prevList) {
                                     for (final LiteralList literals : presenceCondition) {
@@ -167,7 +166,7 @@ public class TWiseStatisticGenerator {
                         final List<Pair<Integer, LiteralList>> prevList = lists.get(j - 1);
                         final List<Pair<Integer, LiteralList>> curList = lists.get(j);
                         curList.clear();
-                        final PresenceCondition presenceCondition = expressions.get(c[j]);
+                        final List<LiteralList> presenceCondition = expressions.get(c[j]);
                         entryLoop:
                         for (final Pair<Integer, LiteralList> entry : prevList) {
                             for (final LiteralList literals : presenceCondition) {
@@ -263,16 +262,16 @@ public class TWiseStatisticGenerator {
         return statisticList;
     }
 
-    public List<ValidityStatistic> getValidity(List<List<? extends LiteralList>> samples) {
+    public List<ValidityStatistic> getValidity(List<List<LiteralList>> samples) {
         final List<ValidityStatistic> statisticList = new ArrayList<>(samples.size());
-        for (final List<? extends LiteralList> sample : samples) {
+        for (final List<LiteralList> sample : samples) {
             final ValidityStatistic statistic = new ValidityStatistic(sample.size());
 
             int configurationIndex = 0;
             configLoop:
             for (final LiteralList configuration : sample) {
                 for (final LiteralList clause : util.getCnf().getClauses()) {
-                    if (!configuration.hasDuplicates(clause)) {
+                    if (configuration.containsAll(clause.negate())) {
                         statistic.setConfigValidity(configurationIndex++, false);
                         continue configLoop;
                     }

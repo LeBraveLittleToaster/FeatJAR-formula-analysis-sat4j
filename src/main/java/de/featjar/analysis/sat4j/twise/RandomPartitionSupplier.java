@@ -20,7 +20,9 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
+import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.combinations.BinomialCalculator;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -32,7 +34,7 @@ import java.util.Random;
  */
 public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
 
-    protected final PresenceCondition[] nextCombination;
+    protected final List<LiteralList>[] nextCombination;
 
     protected final int t, n;
     protected final long numCombinations;
@@ -52,7 +54,7 @@ public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
         this.t = t;
         this.n = n;
         binomialCalculator = new BinomialCalculator(t, n);
-        nextCombination = new PresenceCondition[t];
+        nextCombination = new List[t];
         numCombinations = binomialCalculator.binomial(n, t);
 
         final int numDim = 4 * t;

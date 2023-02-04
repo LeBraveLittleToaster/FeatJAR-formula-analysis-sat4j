@@ -20,7 +20,6 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.data.Pair;
 import java.util.ArrayList;
@@ -43,7 +42,7 @@ class CoverAll implements ICoverStrategy {
     private final List<Pair<LiteralList, TWiseConfiguration>> candidatesList = new ArrayList<>();
 
     @Override
-    public CombinationStatus cover(ClauseList nextCondition) {
+    public CombinationStatus cover(List<LiteralList> nextCondition) {
         if (util.isCovered(nextCondition)) {
             return CombinationStatus.COVERED;
         }

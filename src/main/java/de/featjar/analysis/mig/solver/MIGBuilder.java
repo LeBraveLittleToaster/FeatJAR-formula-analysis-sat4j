@@ -202,7 +202,9 @@ public abstract class MIGBuilder implements MonitorableFunction<CNF, MIG> {
         mig.getCnf().getClauses().stream()
                 .map(c -> cleanClause(c, mig))
                 .filter(Objects::nonNull)
+                .distinct()
                 .forEach(cleanedClausesList::add);
+        mig.clauseList = new ArrayList<>(cleanedClausesList);
     }
 
     protected LiteralList cleanClause(LiteralList clause, MIG mig) {

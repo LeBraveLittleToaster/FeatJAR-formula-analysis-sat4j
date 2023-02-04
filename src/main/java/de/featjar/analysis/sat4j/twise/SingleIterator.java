@@ -20,7 +20,8 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.ClauseList;
+import de.featjar.clauses.LiteralList;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,33 +30,33 @@ import java.util.List;
  *
  * @author Sebastian Krieter
  */
-public class SingleIterator implements ICombinationSupplier<ClauseList> {
+public class SingleIterator implements ICombinationSupplier<List<LiteralList>> {
 
-    private final List<PresenceCondition> expressionSet;
+    private final List<List<LiteralList>> expressionSet;
     private final ICombinationSupplier<int[]> supplier;
     private final long numberOfCombinations;
 
     private final TWiseCombiner combiner;
-    private final PresenceCondition[] nextCombination;
+    private final List<LiteralList>[] nextCombination;
 
-    public SingleIterator(int t, int n, List<PresenceCondition> expressionSet) {
+    public SingleIterator(int t, int n, List<List<LiteralList>> expressionSet) {
         this.expressionSet = expressionSet;
 
         combiner = new TWiseCombiner(n);
-        nextCombination = new PresenceCondition[t];
+        nextCombination = new List[t];
 
         supplier = new RandomPartitionSupplier(t, expressionSet.size());
         numberOfCombinations = supplier.size();
     }
 
     @Override
-    public ClauseList get() {
+    public List<LiteralList> get() {
         final int[] js = supplier.get();
         if (js != null) {
             for (int j = 0; j < js.length; j++) {
                 nextCombination[j] = expressionSet.get(js[j]);
             }
-            final ClauseList combinedCondition = new ClauseList();
+            final List<LiteralList> combinedCondition = new ArrayList<>();
             combiner.combineConditions(nextCombination, combinedCondition);
             return combinedCondition;
         } else {

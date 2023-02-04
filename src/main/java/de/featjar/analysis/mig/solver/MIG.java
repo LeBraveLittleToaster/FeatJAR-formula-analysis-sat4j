@@ -53,6 +53,7 @@ public class MIG {
     private final ArrayList<LiteralList> detectedStrong = new ArrayList<>();
 
     private final List<Vertex> adjList;
+    List<LiteralList> clauseList;
     private final CNF cnf;
 
     private BuildStatus redundancyStatus = BuildStatus.None;
@@ -147,6 +148,10 @@ public class MIG {
 
     public void setRedundancyStatus(BuildStatus redundancyStatus) {
         this.redundancyStatus = redundancyStatus;
+    }
+
+    public List<LiteralList> getClauseList() {
+        return clauseList;
     }
 
     //	public void removeClause(LiteralList clause) {

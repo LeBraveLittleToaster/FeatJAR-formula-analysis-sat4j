@@ -34,7 +34,7 @@ import java.util.List;
 public class TWiseStatisticFastGenerator {
 
     public CoverageStatistic getCoverage(
-            List<? extends LiteralList> sample, List<List<PresenceCondition>> groupedPresenceConditions, int t) {
+            List<? extends LiteralList> sample, List<List<List<LiteralList>>> groupedPresenceConditions, int t) {
         final CoverageStatistic statistic = new CoverageStatistic();
         statistic.initScores(sample.size());
 
@@ -50,12 +50,12 @@ public class TWiseStatisticFastGenerator {
             }
         }
 
-        for (List<PresenceCondition> expressions : groupedPresenceConditions) {
+        for (List<List<LiteralList>> expressions : groupedPresenceConditions) {
             if (expressions.size() < t) {
                 if (expressions.size() == 0) {
                     continue;
                 }
-                final ArrayList<PresenceCondition> paddedExpressions = new ArrayList<>(t);
+                final ArrayList<List<LiteralList>> paddedExpressions = new ArrayList<>(t);
                 paddedExpressions.addAll(expressions);
                 for (int i = expressions.size(); i < t; i++) {
                     paddedExpressions.add(expressions.get(0));
@@ -97,7 +97,7 @@ public class TWiseStatisticFastGenerator {
                         final List<Pair<Integer, LiteralList>> prevList = lists.get(j - 1);
                         final List<Pair<Integer, LiteralList>> curList = lists.get(j);
                         curList.clear();
-                        final PresenceCondition presenceCondition = expressions.get(c[j]);
+                        final List<LiteralList> presenceCondition = expressions.get(c[j]);
                         entryLoop:
                         for (final Pair<Integer, LiteralList> entry : prevList) {
                             for (final LiteralList literals : presenceCondition) {
@@ -111,7 +111,7 @@ public class TWiseStatisticFastGenerator {
                 }
 
                 Pair<Integer, LiteralList> curEntry = null;
-                final PresenceCondition presenceCondition = expressions.get(c[t]);
+                final List<LiteralList> presenceCondition = expressions.get(c[t]);
                 entryLoop:
                 for (final Pair<Integer, LiteralList> entry : lists.get(t - 1)) {
                     for (final LiteralList literals : presenceCondition) {
@@ -144,6 +144,121 @@ public class TWiseStatisticFastGenerator {
             }
             final double d = (double) count / configuration.size();
             final double factor = (2 - (d * d));
+            statistic.setScore(confIndex, statistic.getScore(confIndex) * factor);
+            confIndex++;
+        }
+        return statistic;
+    }
+
+    public CoverageStatistic getCoverage2(
+            List<? extends LiteralList> sample, List<List<LiteralList>> expressions, int t) {
+        final CoverageStatistic statistic = new CoverageStatistic();
+        statistic.initScores(sample.size());
+
+        final ArrayList<List<Pair<Integer, LiteralList>>> lists = new ArrayList<>(t);
+        {
+            for (int i = 0; i < t; i++) {
+                lists.add(new ArrayList<Pair<Integer, LiteralList>>(sample.size()));
+            }
+            final List<Pair<Integer, LiteralList>> list = lists.get(0);
+            int confIndex = 0;
+            for (final LiteralList configuration : sample) {
+                list.add(new Pair<>(confIndex++, configuration));
+            }
+        }
+
+        if (expressions.size() < t) {
+            if (expressions.size() == 0) {
+                return statistic;
+            }
+            final ArrayList<List<LiteralList>> paddedExpressions = new ArrayList<>(t);
+            paddedExpressions.addAll(expressions);
+            for (int i = expressions.size(); i < t; i++) {
+                paddedExpressions.add(expressions.get(0));
+            }
+            expressions = paddedExpressions;
+        }
+        final int n = expressions.size();
+        final int[] c = new int[t + 1];
+        c[0] = -1;
+        for (int i = 1; i <= t; i++) {
+            c[i] = n - (t - i);
+        }
+        boolean first = true;
+
+        combinationLoop:
+        while (true) {
+            int i = t;
+            for (; i > 0; i--) {
+                final int ci = ++c[i];
+                if (ci < ((n - t) + i)) {
+                    break;
+                }
+            }
+
+            if (i == 0) {
+                if (first) {
+                    first = false;
+                } else {
+                    break combinationLoop;
+                }
+            }
+
+            for (int j = i + 1; j <= t; j++) {
+                c[j] = c[j - 1] + 1;
+            }
+
+            for (int j = i; j < t; j++) {
+                if (j > 0) {
+                    final List<Pair<Integer, LiteralList>> prevList = lists.get(j - 1);
+                    final List<Pair<Integer, LiteralList>> curList = lists.get(j);
+                    curList.clear();
+                    final List<LiteralList> presenceCondition = expressions.get(c[j]);
+                    entryLoop:
+                    for (final Pair<Integer, LiteralList> entry : prevList) {
+                        for (final LiteralList literals : presenceCondition) {
+                            if (entry.getValue().containsAll(literals)) {
+                                curList.add(entry);
+                                continue entryLoop;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Pair<Integer, LiteralList> curEntry = null;
+            final List<LiteralList> presenceCondition = expressions.get(c[t]);
+            entryLoop:
+            for (final Pair<Integer, LiteralList> entry : lists.get(t - 1)) {
+                for (final LiteralList literals : presenceCondition) {
+                    if (entry.getValue().containsAll(literals)) {
+                        if (curEntry == null) {
+                            statistic.incNumberOfCoveredConditions();
+                            curEntry = entry;
+                            continue entryLoop;
+                        } else {
+                            continue combinationLoop;
+                        }
+                    }
+                }
+            }
+
+            if (curEntry != null) {
+                statistic.addToScore(curEntry.getKey(), 1);
+            } else {
+                statistic.incNumberOfUncoveredConditions();
+            }
+        }
+        int confIndex = 0;
+        for (final LiteralList configuration : sample) {
+            int count = 0;
+            for (final int literal : configuration.getLiterals()) {
+                if (literal != 0) {
+                    count++;
+                }
+            }
+            final double d = (double) count / configuration.size();
+            final double factor = Math.pow((1 - d), 2);
             statistic.setScore(confIndex, statistic.getScore(confIndex) * factor);
             confIndex++;
         }

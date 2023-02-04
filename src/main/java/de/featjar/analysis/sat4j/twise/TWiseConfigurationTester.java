@@ -23,7 +23,6 @@ package de.featjar.analysis.sat4j.twise;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.TWiseStatisticGenerator.ConfigurationScore;
 import de.featjar.clauses.CNF;
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.combinations.CombinationIterator;
 import de.featjar.clauses.solutions.combinations.LexicographicIterator;
@@ -57,8 +56,9 @@ public class TWiseConfigurationTester {
         }
     }
 
-    public void setNodes(List<List<ClauseList>> expressions) {
-        presenceConditionManager = new PresenceConditionManager(getUtil(), expressions);
+    public void setNodes(List<List<List<LiteralList>>> expressions) {
+        presenceConditionManager = new PresenceConditionManager(
+                getUtil().getDeadCoreFeatures(), util.getCnf().getVariableMap().getVariableCount(), expressions);
     }
 
     public void setNodes(PresenceConditionManager expressions) {
@@ -117,28 +117,28 @@ public class TWiseConfigurationTester {
     }
 
     public boolean hasUncoveredConditions() {
-        final List<ClauseList> uncoveredConditions = getUncoveredConditions(true);
+        final List<List<LiteralList>> uncoveredConditions = getUncoveredConditions(true);
         return !uncoveredConditions.isEmpty();
     }
 
-    public ClauseList getFirstUncoveredCondition() {
-        final List<ClauseList> uncoveredConditions = getUncoveredConditions(true);
+    public List<LiteralList> getFirstUncoveredCondition() {
+        final List<List<LiteralList>> uncoveredConditions = getUncoveredConditions(true);
         return uncoveredConditions.isEmpty() ? null : uncoveredConditions.get(0);
     }
 
-    public List<ClauseList> getUncoveredConditions() {
+    public List<List<LiteralList>> getUncoveredConditions() {
         return getUncoveredConditions(false);
     }
 
-    private List<ClauseList> getUncoveredConditions(boolean cancelAfterFirst) {
-        final ArrayList<ClauseList> uncoveredConditions = new ArrayList<>();
+    private List<List<LiteralList>> getUncoveredConditions(boolean cancelAfterFirst) {
+        final ArrayList<List<LiteralList>> uncoveredConditions = new ArrayList<>();
         final TWiseCombiner combiner =
                 new TWiseCombiner(getUtil().getCnf().getVariableMap().getVariableCount());
-        ClauseList combinedCondition = new ClauseList();
-        final PresenceCondition[] clauseListArray = new PresenceCondition[t];
+        List<LiteralList> combinedCondition = new ArrayList<>();
+        final List<LiteralList>[] clauseListArray = new List[t];
 
         groupLoop:
-        for (final List<PresenceCondition> expressions : presenceConditionManager.getGroupedPresenceConditions()) {
+        for (final List<List<LiteralList>> expressions : presenceConditionManager.getGroupedPresenceConditions()) {
             for (final CombinationIterator iterator = new LexicographicIterator(t, expressions.size());
                     iterator.hasNext(); ) {
                 final int[] next = iterator.next();
@@ -152,7 +152,7 @@ public class TWiseConfigurationTester {
                 if (!TWiseConfigurationUtil.isCovered(combinedCondition, sample)
                         && getUtil().isCombinationValid(combinedCondition)) {
                     uncoveredConditions.add(combinedCondition);
-                    combinedCondition = new ClauseList();
+                    combinedCondition = new ArrayList<>();
                     if (cancelAfterFirst) {
                         break groupLoop;
                     }

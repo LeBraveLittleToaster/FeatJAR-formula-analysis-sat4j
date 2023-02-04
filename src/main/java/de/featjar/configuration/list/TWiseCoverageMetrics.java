@@ -28,7 +28,6 @@ import de.featjar.analysis.sat4j.twise.TWiseConfigurationUtil;
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationUtil.InvalidClausesList;
 import de.featjar.analysis.sat4j.twise.TWiseStatisticGenerator;
 import de.featjar.clauses.CNF;
-import de.featjar.clauses.ClauseList;
 import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
@@ -93,13 +92,13 @@ public class TWiseCoverageMetrics {
     private PresenceConditionManager presenceConditionManager;
     private String name;
     private CNF cnf;
-    private List<List<ClauseList>> expressions;
+    private List<List<List<LiteralList>>> expressions;
 
     public void setCNF(CNF cnf) {
         this.cnf = cnf;
     }
 
-    public void setExpressions(List<List<ClauseList>> expressions) {
+    public void setExpressions(List<List<List<LiteralList>>> expressions) {
         this.expressions = expressions;
     }
 
@@ -117,7 +116,8 @@ public class TWiseCoverageMetrics {
         if (expressions == null) {
             expressions = TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap()));
         }
-        presenceConditionManager = new PresenceConditionManager(util, expressions);
+        presenceConditionManager = new PresenceConditionManager(
+                util.getDeadCoreFeatures(), util.getCnf().getVariableMap().getVariableCount(), expressions);
     }
 
     public TWiseCoverageMetric getTWiseCoverageMetric(int t) {
@@ -125,7 +125,7 @@ public class TWiseCoverageMetrics {
     }
 
     public static List<TWiseCoverageMetric> getTWiseCoverageMetrics(
-            CNF cnf, List<List<ClauseList>> expressions, String name, int... tValues) {
+            CNF cnf, List<List<List<LiteralList>>> expressions, String name, int... tValues) {
         final TWiseCoverageMetrics metrics = new TWiseCoverageMetrics();
         metrics.setName(name);
         metrics.setExpressions(expressions);

@@ -20,6 +20,7 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
+import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.combinations.CombinationIterator;
 import de.featjar.clauses.solutions.combinations.IteratorFactory;
 import java.util.ArrayList;
@@ -40,11 +41,11 @@ public class MergeIterator implements CombinationIterator {
 
     private int iteratorIndex = -1;
 
-    public MergeIterator(int t, List<List<PresenceCondition>> expressionSets, IteratorFactory.IteratorID id) {
+    public MergeIterator(int t, List<List<List<LiteralList>>> expressionSets, IteratorFactory.IteratorID id) {
         this.t = t;
         setIterators = new ArrayList<>(expressionSets.size());
         long sumNumberOfCombinations = 0;
-        for (final List<PresenceCondition> expressions : expressionSets) {
+        for (final List<List<LiteralList>> expressions : expressionSets) {
             final CombinationIterator iterator = IteratorFactory.getIterator(id, expressions.size(), t);
             setIterators.add(iterator);
             sumNumberOfCombinations += iterator.size();
