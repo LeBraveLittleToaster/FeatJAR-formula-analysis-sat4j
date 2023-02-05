@@ -21,83 +21,77 @@
 package de.featjar.analysis.sat4j.twise;
 
 import de.featjar.clauses.LiteralList;
-import de.featjar.clauses.solutions.combinations.CombinationIterator;
-import de.featjar.clauses.solutions.combinations.IteratorFactory;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
- * Combines multiple {@link CombinationIterator iterators} and returns results
- * from each iterator by turns.
+ * Combines multiple {@link ICombinationSupplier supplies} of {@link ClauseList}
+ * and returns results from each supplier by turns.
  *
  * @author Sebastian Krieter
  */
-public class MergeIterator implements CombinationIterator {
+public class MergeIterator implements ICombinationSupplier<List<LiteralList>> {
 
-    protected final List<CombinationIterator> setIterators;
-    protected final long numberOfCombinations;
-    protected final int t;
+    private final List<List<List<LiteralList>>> expressionSets;
+    private final ICombinationSupplier<int[]>[] suppliers;
+    private final long numberOfCombinations;
 
-    private int iteratorIndex = -1;
+    private final List<List<LiteralList>> buffer = new ArrayList<>();
+    private final TWiseCombiner combiner;
+    private final List<LiteralList>[] nextCombination;
 
-    public MergeIterator(int t, List<List<List<LiteralList>>> expressionSets, IteratorFactory.IteratorID id) {
-        this.t = t;
-        setIterators = new ArrayList<>(expressionSets.size());
+    private int bufferIndex = 0;
+    private final int maxIteratorIndex;
+
+    @SuppressWarnings("unchecked")
+    public MergeIterator(int t, int n, List<List<List<LiteralList>>> expressionSets) {
+        this.expressionSets = expressionSets;
+
+        maxIteratorIndex = expressionSets.size() - 1;
+        suppliers = new ICombinationSupplier[expressionSets.size()];
+        combiner = new TWiseCombiner(n);
+        nextCombination = new List[t];
+
         long sumNumberOfCombinations = 0;
-        for (final List<List<LiteralList>> expressions : expressionSets) {
-            final CombinationIterator iterator = IteratorFactory.getIterator(id, expressions.size(), t);
-            setIterators.add(iterator);
-            sumNumberOfCombinations += iterator.size();
+        for (int i = 0; i <= maxIteratorIndex; i++) {
+            final ICombinationSupplier<int[]> supplier =
+                    new RandomPartitionSupplier(t, expressionSets.get(i).size());
+            suppliers[i] = supplier;
+            sumNumberOfCombinations += supplier.size();
         }
         numberOfCombinations = sumNumberOfCombinations;
     }
 
     @Override
-    public boolean hasNext() {
-        for (final CombinationIterator iterator : setIterators) {
-            if (iterator.hasNext()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public int[] next() {
-        for (int i = 0; i < setIterators.size(); i++) {
-            iteratorIndex = (iteratorIndex + 1) % setIterators.size();
-            final CombinationIterator iterator = setIterators.get(iteratorIndex);
-            if (iterator.hasNext()) {
-                final int[] next = iterator.next();
-                if (next != null) {
-                    return next;
+    public List<LiteralList> get() {
+        if (buffer.isEmpty()) {
+            for (int i = 0; i <= maxIteratorIndex; i++) {
+                final ICombinationSupplier<int[]> supplier = suppliers[i];
+                if (supplier != null) {
+                    final int[] js = supplier.get();
+                    if (js != null) {
+                        final List<List<LiteralList>> expressionSet = expressionSets.get(i);
+                        for (int j = 0; j < js.length; j++) {
+                            nextCombination[j] = expressionSet.get(js[j]);
+                        }
+                        final List<LiteralList> combinedCondition = new ArrayList<>();
+                        combiner.combineConditions(nextCombination, combinedCondition);
+                        buffer.add(combinedCondition);
+                    } else {
+                        suppliers[i] = null;
+                    }
                 }
             }
+            if (buffer.isEmpty()) {
+                return null;
+            }
         }
-        return null;
-    }
-
-    @Override
-    public long getIndex() {
-        long mergedIndex = setIterators.get(iteratorIndex).getIndex();
-        for (int i = iteratorIndex - 1; i >= 0; i--) {
-            mergedIndex += setIterators.get(i).size();
+        final List<LiteralList> remove = buffer.get(bufferIndex++);
+        if (bufferIndex == buffer.size()) {
+            buffer.clear();
+            bufferIndex = 0;
         }
-        return mergedIndex;
-    }
-
-    @Override
-    public void reset() {
-        iteratorIndex = 0;
-        for (final CombinationIterator iterator : setIterators) {
-            iterator.reset();
-        }
-    }
-
-    @Override
-    public Iterator<int[]> iterator() {
-        return this;
+        return remove;
     }
 
     @Override

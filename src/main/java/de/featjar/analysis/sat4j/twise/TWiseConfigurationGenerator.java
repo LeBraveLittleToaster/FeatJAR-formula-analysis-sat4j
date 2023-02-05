@@ -264,7 +264,7 @@ public class TWiseConfigurationGenerator extends AbstractConfigurationGenerator 
             it = new SingleIterator(
                     t, util.getCnf().getVariableMap().getVariableCount(), groupedPresenceConditions.get(0));
         } else {
-            it = new MergeIterator3(t, util.getCnf().getVariableMap().getVariableCount(), groupedPresenceConditions);
+            it = new MergeIterator(t, util.getCnf().getVariableMap().getVariableCount(), groupedPresenceConditions);
         }
         numberOfCombinations = it.size();
         monitor.setTotalWork(numberOfCombinations);
