@@ -37,12 +37,19 @@ public class TWiseConfiguration3 extends LiteralList {
     private static final long serialVersionUID = -4775410644924706701L;
 
     final int numberOfVariableLiterals;
-    int rank = 0;
-    int id;
+    final int id;
 
     Visitor visitor;
 
     ArrayDeque<LiteralList> solverSolutions;
+
+    public TWiseConfiguration3(TWiseConfiguration3 config) {
+        super(config);
+        id = config.id;
+        numberOfVariableLiterals = config.visitor.newLiterals.length;
+        visitor = config.visitor.getVisitorProvider().new Visitor(config.visitor, literals);
+        solverSolutions = config.solverSolutions != null ? new ArrayDeque<>(config.solverSolutions) : null;
+    }
 
     public TWiseConfiguration3(
             int id, MIGVisitorProvider mig, ArrayDeque<LiteralList> randomSample, int... newliterals) {
@@ -50,7 +57,7 @@ public class TWiseConfiguration3 extends LiteralList {
         this.id = id;
         visitor = mig.getVisitor(this.literals);
         numberOfVariableLiterals = visitor.newLiterals.length;
-        this.solverSolutions = new ArrayDeque<>();
+        solverSolutions = new ArrayDeque<>();
         visitor.propagate(newliterals);
     }
 
@@ -70,13 +77,17 @@ public class TWiseConfiguration3 extends LiteralList {
     }
 
     public void updateSolutionList(int lastIndex) {
-        for (int i = lastIndex; i < visitor.modelCount; i++) {
-            final int newLiteral = visitor.newLiterals[i];
-            final int k = Math.abs(newLiteral) - 1;
-            for (Iterator<LiteralList> it = solverSolutions.iterator(); it.hasNext(); ) {
-                final int[] solverSolutionLiterals = it.next().getLiterals();
-                if (solverSolutionLiterals[k] != newLiteral) {
-                    it.remove();
+        if (isComplete()) {
+            clear();
+        } else {
+            for (int i = lastIndex; i < visitor.modelCount; i++) {
+                final int newLiteral = visitor.newLiterals[i];
+                final int k = Math.abs(newLiteral) - 1;
+                for (Iterator<LiteralList> it = solverSolutions.iterator(); it.hasNext(); ) {
+                    final int[] solverSolutionLiterals = it.next().getLiterals();
+                    if (solverSolutionLiterals[k] != newLiteral) {
+                        it.remove();
+                    }
                 }
             }
         }
@@ -98,10 +109,6 @@ public class TWiseConfiguration3 extends LiteralList {
 
     public int countLiterals() {
         return visitor.modelCount;
-    }
-
-    public void setRank(int rank) {
-        this.rank = rank;
     }
 
     @Override

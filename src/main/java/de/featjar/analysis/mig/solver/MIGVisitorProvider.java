@@ -66,6 +66,17 @@ public class MIGVisitorProvider {
             this(new int[size]);
         }
 
+        public Visitor(Visitor oldVisitor, int[] model) {
+            tempClauseCounts = Arrays.copyOf(oldVisitor.tempClauseCounts, oldVisitor.tempClauseCounts.length);
+            newLiterals = Arrays.copyOf(oldVisitor.newLiterals, oldVisitor.newLiterals.length);
+            this.model = model;
+            modelCount = oldVisitor.modelCount;
+        }
+
+        public MIGVisitorProvider getVisitorProvider() {
+            return MIGVisitorProvider.this;
+        }
+
         public void propagate(int... literals) throws RuntimeContradictionException {
             for (int l : literals) {
                 processLiteral(l);
