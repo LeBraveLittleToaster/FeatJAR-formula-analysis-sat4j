@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Sebastian Krieter
+ * Copyright (C) 2023 Sebastian Krieter
  *
  * This file is part of formula-analysis-sat4j.
  *
