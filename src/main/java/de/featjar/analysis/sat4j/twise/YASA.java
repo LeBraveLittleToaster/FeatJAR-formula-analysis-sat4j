@@ -47,10 +47,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -96,35 +96,34 @@ public class YASA extends AbstractConfigurationGenerator {
 
         private Visitor visitor;
 
-        private ArrayDeque<LiteralList> solverSolutions;
+        private ArrayList<LiteralList> solverSolutions;
 
         public PartialConfiguration(PartialConfiguration config) {
             super(config);
             id = config.id;
             visitor = config.visitor.getVisitorProvider().new Visitor(config.visitor, literals);
-            solverSolutions = config.solverSolutions != null ? new ArrayDeque<>(config.solverSolutions) : null;
+            solverSolutions = config.solverSolutions != null ? new ArrayList<>(config.solverSolutions) : null;
         }
 
         public PartialConfiguration(int id, MIGVisitorProvider mig, int... newliterals) {
             super(new int[mig.size()], Order.INDEX, false);
             this.id = id;
             visitor = mig.getVisitor(this.literals);
-            solverSolutions = new ArrayDeque<>();
+            solverSolutions = new ArrayList<>();
             visitor.propagate(newliterals);
         }
 
-        public void updateSolutionList(ArrayDeque<LiteralList> solverSolutions) {
+        public void initSolutionList() {
             solutionLoop:
-            for (LiteralList solution : solverSolutions) {
+            for (LiteralList solution : randomSample) {
                 final int[] solverSolutionLiterals = solution.getLiterals();
                 for (int j = 0; j < visitor.modelCount; j++) {
-                    int l = visitor.newLiterals[j];
-                    final int k = Math.abs(l) - 1;
-                    if (solverSolutionLiterals[k] != l) {
+                    final int l = visitor.newLiterals[j];
+                    if (solverSolutionLiterals[Math.abs(l) - 1] != l) {
                         continue solutionLoop;
                     }
                 }
-                this.solverSolutions.add(solution);
+                solverSolutions.add(solution);
             }
         }
 
@@ -133,10 +132,13 @@ public class YASA extends AbstractConfigurationGenerator {
                 for (int i = lastIndex; i < visitor.modelCount; i++) {
                     final int newLiteral = visitor.newLiterals[i];
                     final int k = Math.abs(newLiteral) - 1;
-                    for (Iterator<LiteralList> it = solverSolutions.iterator(); it.hasNext(); ) {
-                        final int[] solverSolutionLiterals = it.next().getLiterals();
+                    for (int j = solverSolutions.size() - 1; j >= 0; j--) {
+                        final int[] solverSolutionLiterals =
+                                solverSolutions.get(j).getLiterals();
                         if (solverSolutionLiterals[k] != newLiteral) {
-                            it.remove();
+                            final int last = solverSolutions.size() - 1;
+                            Collections.swap(solverSolutions, j, last);
+                            solverSolutions.remove(last);
                         }
                     }
                 }
@@ -191,20 +193,6 @@ public class YASA extends AbstractConfigurationGenerator {
 
     private final List<List<LiteralList>> presenceConditions = new ArrayList<>();
 
-    public void shuffleSort() {
-        final Map<Integer, List<List<LiteralList>>> groupedPCs =
-                presenceConditions.stream().collect(Collectors.groupingBy(List::size));
-        for (final List<List<LiteralList>> pcList : groupedPCs.values()) {
-            Collections.shuffle(pcList, random);
-        }
-        final List<Entry<Integer, List<List<LiteralList>>>> shuffledPCs = new ArrayList<>(groupedPCs.entrySet());
-        Collections.sort(shuffledPCs, (a, b) -> a.getKey() - b.getKey());
-        presenceConditions.clear();
-        for (final Entry<Integer, List<List<LiteralList>>> entry : shuffledPCs) {
-            presenceConditions.addAll(entry.getValue());
-        }
-    }
-
     public void setT(int t) {
         if (t < 1) {
             throw new IllegalArgumentException(String.valueOf(t));
@@ -213,19 +201,30 @@ public class YASA extends AbstractConfigurationGenerator {
     }
 
     public void setNodes(List<List<LiteralList>> nodes) {
-        this.nodes = nodes;
+        this.nodes = Objects.requireNonNull(nodes);
     }
 
     public void setIterations(int iterations) {
+        if (iterations < 1) {
+            throw new IllegalArgumentException(String.valueOf(iterations));
+        }
         this.iterations = iterations;
     }
 
     public void setMaxSampleSize(int maxSampleSize) {
+        if (maxSampleSize < 0) {
+            throw new IllegalArgumentException(String.valueOf(maxSampleSize));
+        }
         this.maxSampleSize = maxSampleSize;
     }
 
     public void setMIG(MIG mig) {
         this.mig = new MIGVisitorProvider(mig);
+    }
+
+    @Override
+    public LiteralList get() {
+        return bestResult.isEmpty() ? null : bestResult.remove(bestResult.size() - 1);
     }
 
     @Override
@@ -235,7 +234,7 @@ public class YASA extends AbstractConfigurationGenerator {
         solver.setSelectionStrategy(SStrategy.random(random));
         curSolutionId = 0;
         selectedIndexedSolutions = new IntList[t];
-
+        // Logger.setPrintStackTrace(true);
         if (nodes == null) {
             nodes = convertLiterals(LiteralList.getLiterals(cnf));
         }
@@ -288,11 +287,6 @@ public class YASA extends AbstractConfigurationGenerator {
 
         bestResult.forEach(this::autoComplete);
         Collections.reverse(bestResult);
-    }
-
-    @Override
-    public LiteralList get() {
-        return bestResult.isEmpty() ? null : bestResult.remove(bestResult.size() - 1);
     }
 
     private void trimConfigurations(int iteration) {
@@ -471,7 +465,7 @@ public class YASA extends AbstractConfigurationGenerator {
                     count++;
                 }
             }
-            double factor = Math.pow((2.0 - (((double) count) / configuration.size())), t);
+            final double factor = Math.pow((2.0 - (((double) count) / configuration.size())), t);
             configScore[confIndex] = (long) Math.round(configScore[confIndex] * factor);
             confIndex++;
         }
@@ -520,13 +514,13 @@ public class YASA extends AbstractConfigurationGenerator {
                     }
                     addToCandidateList(combinationLiterals);
                 }
-                //				if (firstCover(combinationLiterals)) {
-                //					continue;
-                //				}
-                //				if (!isCombinationValidSample(combinationLiterals) &&
+                // if (firstCover(combinationLiterals)) {
+                // continue;
+                // }
+                // if (!isCombinationValidSample(combinationLiterals) &&
                 // isCombinationInvalidSAT(combinationLiterals)) {
-                //					continue;
-                //				}
+                // continue;
+                // }
 
                 if (coverSat(combinationLiterals)) {
                     continue;
@@ -567,6 +561,20 @@ public class YASA extends AbstractConfigurationGenerator {
         }
     }
 
+    private void shuffleSort() {
+        final Map<Integer, List<List<LiteralList>>> groupedPCs =
+                presenceConditions.stream().collect(Collectors.groupingBy(List::size));
+        for (final List<List<LiteralList>> pcList : groupedPCs.values()) {
+            Collections.shuffle(pcList, random);
+        }
+        final List<Entry<Integer, List<List<LiteralList>>>> shuffledPCs = new ArrayList<>(groupedPCs.entrySet());
+        Collections.sort(shuffledPCs, (a, b) -> a.getKey() - b.getKey());
+        presenceConditions.clear();
+        for (final Entry<Integer, List<List<LiteralList>>> entry : shuffledPCs) {
+            presenceConditions.addAll(entry.getValue());
+        }
+    }
+
     private void addIndexBestSolutions(PartialConfiguration solution) {
         final int[] literals = solution.getLiterals();
         for (int i = 0; i < literals.length; i++) {
@@ -580,13 +588,9 @@ public class YASA extends AbstractConfigurationGenerator {
     }
 
     private void addIndexSolutions(PartialConfiguration solution) {
-        final int[] literals = solution.getLiterals();
-        for (int i = 0; i < literals.length; i++) {
-            final int literal = literals[i];
+        for (int literal : solution.getLiterals()) {
             if (literal != 0) {
-                final int vertexIndex = MIGVisitorProvider.getVertexIndex(literal);
-                IntList indexList = indexedSolutions.get(vertexIndex);
-                indexList.add(solution.id);
+                indexedSolutions.get(MIGVisitorProvider.getVertexIndex(literal)).add(solution.id);
             }
         }
     }
@@ -772,14 +776,16 @@ public class YASA extends AbstractConfigurationGenerator {
                     PartialConfiguration compatibleConfiguration = null;
                     for (PartialConfiguration c : candidateConfiguration) {
                         if (!c.hasConflicts(e)) {
-                            c.solverSolutions.add(e);
                             if (compatibleConfiguration == null) {
                                 compatibleConfiguration = c;
+                            } else {
+                                c.solverSolutions.add(e);
                             }
                         }
                     }
                     if (compatibleConfiguration != null) {
                         select(compatibleConfiguration, literals);
+                        compatibleConfiguration.solverSolutions.add(e);
                         change(compatibleConfiguration);
                         return true;
                     }
@@ -810,7 +816,7 @@ public class YASA extends AbstractConfigurationGenerator {
             if (newConfiguration == null) {
                 newConfiguration = new PartialConfiguration(curSolutionId++, mig, literals);
             }
-            newConfiguration.updateSolutionList(randomSample);
+            newConfiguration.initSolutionList();
             solutionList.add(newConfiguration);
             change(newConfiguration);
             for (int i = 0; i < newConfiguration.visitor.modelCount; i++) {
@@ -826,7 +832,7 @@ public class YASA extends AbstractConfigurationGenerator {
         if (!configuration.isComplete()) {
             if (configuration.solverSolutions.size() > 0) {
                 final int[] configuration2 =
-                        configuration.solverSolutions.getFirst().getLiterals();
+                        configuration.solverSolutions.get(0).getLiterals();
                 System.arraycopy(configuration2, 0, configuration.getLiterals(), 0, configuration.size());
                 configuration.clear();
             } else {
@@ -896,7 +902,6 @@ public class YASA extends AbstractConfigurationGenerator {
                     return false;
                 case TRUE:
                     final LiteralList e = addSolverSolution();
-                    configuration.solverSolutions.add(e);
                     for (int i = oldModelCount; i < configuration.visitor.modelCount; i++) {
                         IntList indexList = indexedSolutions.get(
                                 MIGVisitorProvider.getVertexIndex(configuration.visitor.newLiterals[i]));
@@ -907,6 +912,7 @@ public class YASA extends AbstractConfigurationGenerator {
                         }
                     }
                     configuration.updateSolutionList(oldModelCount);
+                    configuration.solverSolutions.add(e);
                     return true;
                 default:
                     throw new IllegalStateException(String.valueOf(hasSolution));

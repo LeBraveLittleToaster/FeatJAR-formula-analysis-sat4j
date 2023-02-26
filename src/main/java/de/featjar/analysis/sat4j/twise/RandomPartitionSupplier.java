@@ -20,9 +20,7 @@
  */
 package de.featjar.analysis.sat4j.twise;
 
-import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.combinations.BinomialCalculator;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -34,15 +32,12 @@ import java.util.Random;
  */
 public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
 
-    protected final List<LiteralList>[] nextCombination;
+    private final long numCombinations;
+    private final BinomialCalculator binomialCalculator;
 
-    protected final int t, n;
-    protected final long numCombinations;
-    protected final BinomialCalculator binomialCalculator;
+    private long counter = 0;
 
-    protected long counter = 0;
-
-    protected final int[][] dim;
+    private final int[][] dim;
     private final int[] pos;
     private final int radix;
 
@@ -51,10 +46,7 @@ public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
     }
 
     public RandomPartitionSupplier(int t, int n, Random random) {
-        this.t = t;
-        this.n = n;
         binomialCalculator = new BinomialCalculator(t, n);
-        nextCombination = new List[t];
         numCombinations = binomialCalculator.binomial(n, t);
 
         final int numDim = 4 * t;
@@ -82,7 +74,8 @@ public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
 
     @Override
     public int[] get() {
-        return computeCombination(nextIndex());
+        final long nextIndex = nextIndex();
+        return nextIndex < 0 ? null : binomialCalculator.combination(nextIndex);
     }
 
     protected long nextIndex() {
@@ -107,29 +100,6 @@ public class RandomPartitionSupplier implements ICombinationSupplier<int[]> {
         } while (result >= numCombinations);
 
         return result;
-    }
-
-    protected int[] computeCombination(long index) {
-        if (index < 0) {
-            return null;
-        }
-        final int[] combination = new int[t];
-        for (int i = t; i > 0; i--) {
-            if (index <= 0) {
-                combination[i - 1] = i - 1;
-            } else {
-                final double root = 1.0 / i;
-                final int p = (int) Math.ceil(Math.pow(index, root) * Math.pow(binomialCalculator.factorial(i), root));
-                for (int j = p; j <= n; j++) {
-                    if (binomialCalculator.binomial(j, i) > index) {
-                        combination[i - 1] = j - 1;
-                        index -= binomialCalculator.binomial(j - 1, i);
-                        break;
-                    }
-                }
-            }
-        }
-        return combination;
     }
 
     @Override
