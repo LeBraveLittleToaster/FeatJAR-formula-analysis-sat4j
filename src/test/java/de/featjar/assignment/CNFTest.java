@@ -52,6 +52,7 @@ import org.junit.jupiter.api.Test;
 
 public class CNFTest {
 
+
     @Test
     public void testAnalyses() {
         final VariableMap variables = new VariableMap();
