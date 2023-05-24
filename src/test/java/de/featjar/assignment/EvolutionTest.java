@@ -2,6 +2,7 @@ package de.featjar.assignment;
 
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
 import de.featjar.analysis.sat4j.FastRandomConfigurationGenerator;
+import de.featjar.analysis.sat4j.HasSolutionAnalysis;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.PresenceConditionManager;
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
@@ -15,6 +16,7 @@ import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.Formula;
 import de.featjar.formula.structure.Formulas;
+import de.featjar.formula.structure.atomic.Assignment;
 import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.formula.structure.atomic.literal.BooleanLiteral;
 import de.featjar.util.extension.ExtensionLoader;
@@ -37,17 +39,17 @@ public class EvolutionTest {
     ExtensionLoader.load();
     //ModelRepresentation rep = ModelRepresentation.load(Paths.get("C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/GPL/model.xml")).orElse(Logger::logProblems);
     ModelRepresentation rep = ModelRepresentation.load(Paths.get(
-            "C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo0.xml"))
+            "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e0.xml"))
         .orElse(Logger::logProblems);
     ModelRepresentation repEvo = ModelRepresentation.load(Paths.get(
-            "C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo1.xml"))
+            "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e1.xml"))
         .orElse(Logger::logProblems);
 
     //System.out.println("EVO STAGE = 0");
     Formula formula = rep.getFormula();
     //System.out.println(Formulas.printTree(formula));
     CNF cnf = rep.get(CNFProvider.fromFormula());
-    //printCNF(cnf);
+    printCNF(cnf);
 
     //System.out.println("\n\nEVO STAGE = 1");
     Formula formulaEvo = repEvo.getFormula();
@@ -76,6 +78,7 @@ public class EvolutionTest {
   }
 
   private static void printCNF(CNF cnf) {
+    System.out.println("++++++ CNF START +++++\n");
     AtomicInteger idx = new AtomicInteger(0);
     cnf.getClauses().forEach(clause -> {
       System.out.println("[" + idx.getAndIncrement() + "] " + clause);
@@ -83,6 +86,7 @@ public class EvolutionTest {
         System.out.println("\t" + cnf.getVariableMap().getVariableName(Math.abs(literal)).get());
       }
     });
+    System.out.println("\n++++++ CNF END +++++");
   }
 
   /**
@@ -140,22 +144,21 @@ public class EvolutionTest {
       }
     });
 
-            /*
-            //TODO: NOT WORKING DUE TO DIFFERENT CONFIGURATION TO MAPPING LENGTH
+
             HasSolutionAnalysis sat = new HasSolutionAnalysis();
-            Assignment assumptions = contra.getAssumptions();
+            Assignment assumptions2 = contra.getAssumptions();
             for (int l : s.getLiterals()) {
-                assumptions.set(Math.abs(l), l > 0);
+                assumptions2.set(Math.abs(l), l > 0);
             }
-            assumptions = sat.getAssumptions();
+            assumptions2 = sat.getAssumptions();
             for (int l : s.getLiterals()) {
                 if (l != 0) {
-                    assumptions.set(Math.abs(l), l > 0);
+                    assumptions2.set(Math.abs(l), l > 0);
                 }
             }
             Boolean canBeValid = repEvo.get(sat);
             System.out.println("HasSolutionAnalysis = " + canBeValid);
-            */
+
     //}
   }
 

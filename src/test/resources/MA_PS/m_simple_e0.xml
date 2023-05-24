@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<featureModel>
+	<properties>
+		<graphics key="autolayoutconstraints" value="false"/>
+		<graphics key="legendautolayout" value="true"/>
+		<graphics key="showconstraints" value="true"/>
+		<graphics key="showshortnames" value="false"/>
+		<graphics key="layout" value="horizontal"/>
+		<graphics key="showcollapsedconstraints" value="true"/>
+		<graphics key="legendhidden" value="false"/>
+		<graphics key="layoutalgorithm" value="1"/>
+	</properties>
+	<struct>
+		<and abstract="true" mandatory="true" name="Root">
+			<and mandatory="true" name="Desk">
+				<or name="Color">
+					<feature name="Red"/>
+					<feature name="Green"/>
+					<feature name="Blue"/>
+				</or>
+				<feature name="WoodPlate"/>
+				<feature name="MetalFeet"/>
+			</and>
+		</and>
+	</struct>
+	<constraints>
+		<rule>
+			<disj>
+				<var>WoodPlate</var>
+				<var>Red</var>
+			</disj>
+		</rule>
+		<rule>
+			<disj>
+				<var>MetalFeet</var>
+				<not>
+					<var>Color</var>
+				</not>
+			</disj>
+		</rule>
+	</constraints>
+</featureModel>
