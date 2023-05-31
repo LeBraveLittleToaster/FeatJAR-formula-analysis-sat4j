@@ -229,6 +229,11 @@ public class YASA extends AbstractConfigurationGenerator {
 
     @Override
     protected void init(InternalMonitor monitor) {
+        init2(monitor);
+        buildConfigurations(monitor);
+    }
+
+    public void init2(InternalMonitor monitor) {
         cnf = solver.getCnf();
         solver.rememberSolutionHistory(0);
         solver.setSelectionStrategy(SStrategy.random(random));
@@ -277,6 +282,14 @@ public class YASA extends AbstractConfigurationGenerator {
         });
 
         solutionList = new ArrayList<>();
+        final int indexSize = 2 * mig.size();
+        indexedSolutions = new ArrayList<>(indexSize);
+        for (int i2 = 0; i2 < indexSize; i2++) {
+            indexedSolutions.add(new IntList());
+        }
+    }
+
+    public void buildConfigurations(InternalMonitor monitor) {
         buildCombinations(monitor, 0);
         Logger.logDebug(solutionList.size() + " (" + bestResult.size() + ")");
         for (int i = 1; i < iterations; i++) {
@@ -486,11 +499,6 @@ public class YASA extends AbstractConfigurationGenerator {
         final int[] combinationLiterals = new int[t];
 
         if (phase == 0) {
-            final int indexSize = 2 * mig.size();
-            indexedSolutions = new ArrayList<>(indexSize);
-            for (int i2 = 0; i2 < indexSize; i2++) {
-                indexedSolutions.add(new IntList());
-            }
             for (int[] next = it.next(); next != null; next = it.next()) {
                 monitor.step();
                 for (int i = 0; i < next.length; i++) {
@@ -811,7 +819,7 @@ public class YASA extends AbstractConfigurationGenerator {
         return false;
     }
 
-    private void newConfiguration(int[] literals) {
+    public void newConfiguration(int[] literals) {
         if (solutionList.size() < maxSampleSize) {
             if (newConfiguration == null) {
                 newConfiguration = new PartialConfiguration(curSolutionId++, mig, literals);
