@@ -1,7 +1,6 @@
 package de.featjar.assignment;
 
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
-import de.featjar.analysis.sat4j.FastRandomConfigurationGenerator;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.*;
@@ -15,20 +14,24 @@ import de.featjar.formula.structure.Formula;
 import de.featjar.formula.structure.Formulas;
 import de.featjar.formula.structure.atomic.Assignment;
 import de.featjar.formula.structure.atomic.IndexAssignment;
-import de.featjar.formula.structure.atomic.literal.VariableMap;
 import de.featjar.util.extension.ExtensionLoader;
 import de.featjar.util.job.NullMonitor;
 import de.featjar.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 public class EvolutionTest {
+
+    private static boolean PRINT_CNFS = true;
 
     @Test
     public void testTry() {
@@ -41,22 +44,19 @@ public class EvolutionTest {
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e1.xml"))
                 .orElse(Logger::logProblems);
 
-        //System.out.println("EVO STAGE = 0");
-        Formula formula = rep.getFormula();
-        //System.out.println(Formulas.printTree(formula));
+        // Evolution Step 0
         CNF cnf = rep.get(CNFProvider.fromFormula());
-        printCNF(cnf);
 
-        //System.out.println("\n\nEVO STAGE = 1");
-        Formula formulaEvo = repEvo.getFormula();
+        // Evolution Step 1
         CNF cnfEvo = repEvo.get(CNFProvider.fromFormula());
-        printCNF(cnfEvo);
-        //System.out.println(Formulas.printTree(formulaEvo));
+        Formula formulaEvo = repEvo.getFormula();
 
-        //System.out.println(cnf.getVariableMap().getVariableNames());
+        if(PRINT_CNFS) {
+            printCNF(cnf);
+            printCNF(cnfEvo);
+        }
 
-        SolutionList solutionList = generateValidConfigurations(rep);
-
+        SolutionList solutionList = generateValidTWiseConfigurations(rep);
         calculateCoverage(cnf, solutionList);
 
         YASA yasa = new YASA();
@@ -65,24 +65,20 @@ public class EvolutionTest {
         yasa.init2(monitor);
 
         solutionList.getSolutions().forEach(s -> {
-            /*
-            int randomVar = (int) (Math.random() * s.size());
-            s.getLiterals()[randomVar] = randomVar + 1;
-            */
             checkConfigurationOnNextEvolution(rep, repEvo, formulaEvo, s);
             yasa.newConfiguration(IntStream.of(s.getLiterals()).filter(i -> i != 0).toArray());
         });
 
         yasa.buildConfigurations(monitor);
+        // New sample from partial configuration
         var newSample = StreamSupport.stream(yasa, false).collect(Collectors.toCollection(ArrayList::new));
-
         System.out.println("NEW SAMPLE");
         System.out.println(newSample);
 
+        // Calculate coverage
         var newSolutions = new SolutionList(repEvo.getVariables(), newSample);
         calculateCoverage(repEvo.get(CNFProvider.fromFormula()), newSolutions);
     }
-
     private static void printCNF(CNF cnf) {
         System.out.println("++++++ CNF START +++++\n");
         AtomicInteger idx = new AtomicInteger(0);
@@ -125,45 +121,26 @@ public class EvolutionTest {
         IndexAssignment a = new IndexAssignment();
         for (int l : s.getLiterals()) {
             a.set(Math.abs(l), l > 0);
-            //var variableName = repEvo.getVariables().getBooleanVariable(Math.abs(l)).get();
             assumptions.add(new LiteralList(l));
         }
         contra.setClauseList(assumptions);
-        //a.set(12, true);
-        //a.set(13, true);
 
         boolean isFormulaValid = (boolean) Formulas.evaluate(formula, a)
                 .orElse(false); //TODO: orElse false gleich richtig? Was bedeuetet no value present here?
         System.out.println("Is configuration valid = "
                 + isFormulaValid); //evaluate => search for solution, each solution = one configuration
-        if(isFormulaValid) return;
+        if (isFormulaValid) return;
 
         formula.getChildren().forEach(clause -> {
             boolean isValid = (boolean) Formulas.evaluate(clause, a)
                     .orElse(false); //TODO: orElse false gleich richtig? Was bedeuetet no value present here?
-            if(!isValid){
+            if (!isValid) {
                 Formulas.getVariables(clause).forEach(variable -> {
                     s.getLiterals()[variable.getIndex() - 1] = 0;
                 });
 
             }
         });
-
-
-        //if (!isValid) {
-        /*
-        List<LiteralList> contradictions = repEvo.get(contra);
-        contradictions.forEach(c -> {
-            if (c != null) {
-                System.out.println(Arrays.toString(c.getLiterals()));
-                for (int l : c.getLiterals()) {
-                    s.getLiterals()[Math.abs(l) - 1] = 0;
-                }
-
-            }
-        });
-        */
-
 
         HasSolutionAnalysis sat = new HasSolutionAnalysis();
         Assignment assumptions2 = contra.getAssumptions();
@@ -179,30 +156,25 @@ public class EvolutionTest {
         Boolean canBeValid = repEvo.get(sat);
         System.out.println(s);
         System.out.println("HasSolutionAnalysis = " + canBeValid + "\n");
-        //}
     }
 
     private static void calculateCoverage(CNF cnf, SolutionList solutionList) {
         TWiseConfigurationUtil util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
         TWiseStatisticGenerator stat = new TWiseStatisticGenerator(util);
 
-    PresenceConditionManager pcManager = new PresenceConditionManager(util.getDeadCoreFeatures(),solutionList.getVariableMap().getVariableCount(), TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap())));
-    var coverage = stat.getCoverage(List.of(solutionList.getSolutions()),
-        pcManager.getGroupedPresenceConditions(), 2
-        , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
-    System.out.println("NEW COVERAGE: " + coverage.get(0).getCoverage());
-
-
+        PresenceConditionManager pcManager = new PresenceConditionManager(
+                util.getDeadCoreFeatures(),
+                solutionList.getVariableMap().getVariableCount(),
+                TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap())));
+        var coverage = stat.getCoverage(List.of(solutionList.getSolutions()),
+                pcManager.getGroupedPresenceConditions(), 2
+                , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
+        System.out.println("NEW COVERAGE: " + coverage.get(0).getCoverage());
     }
 
-    private static SolutionList generateValidConfigurations(ModelRepresentation rep) {
+    private static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
         TWiseConfigurationGenerator twisegen = new TWiseConfigurationGenerator();
-        FastRandomConfigurationGenerator gen = new FastRandomConfigurationGenerator();
-        gen.setRandom(new Random(1));
-        gen.setLimit(10);
-        gen.setAllowDuplicates(false);
         twisegen.setT(2);
-        SolutionList solutionList = rep.get(twisegen);
-        return solutionList;
+        return rep.get(twisegen);
     }
 }
