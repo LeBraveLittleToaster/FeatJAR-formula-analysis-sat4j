@@ -31,54 +31,77 @@ import java.util.stream.StreamSupport;
 
 public class EvolutionTest {
 
-    private static boolean PRINT_CNFS = true;
+    private static boolean PRINT_CNFS = false;
+    private static boolean PRINT_CONFIG_EXTENDED = true;
 
     @Test
     public void testTry() {
         ExtensionLoader.load();
-        //ModelRepresentation rep = ModelRepresentation.load(Paths.get("C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/GPL/model.xml")).orElse(Logger::logProblems);
-        ModelRepresentation rep = ModelRepresentation.load(Paths.get(
+        //ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get("C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/GPL/model.xml")).orElse(Logger::logProblems);
+        /*
+        ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e0.xml"))
                 .orElse(Logger::logProblems);
-        ModelRepresentation repEvo = ModelRepresentation.load(Paths.get(
+        ModelRepresentation repEvo1 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e1.xml"))
                 .orElse(Logger::logProblems);
 
+         */
+        ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo0.xml"))
+                .orElse(Logger::logProblems);
+        ModelRepresentation repEvo1 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo1_simple.xml"))
+                .orElse(Logger::logProblems);
+
+
         // Evolution Step 0
-        CNF cnf = rep.get(CNFProvider.fromFormula());
+        CNF cnfEvo0 = repEvo0.get(CNFProvider.fromFormula());
 
         // Evolution Step 1
-        CNF cnfEvo = repEvo.get(CNFProvider.fromFormula());
-        Formula formulaEvo = repEvo.getFormula();
+        CNF cnfEvo1 = repEvo1.get(CNFProvider.fromFormula());
+        Formula formulaEvo = repEvo1.getFormula();
 
-        if(PRINT_CNFS) {
-            printCNF(cnf);
-            printCNF(cnfEvo);
+        if (PRINT_CNFS) {
+            printCNF(cnfEvo0);
+            printCNF(cnfEvo1);
         }
 
-        SolutionList solutionList = generateValidTWiseConfigurations(rep);
-        calculateCoverage(cnf, solutionList);
+        SolutionList solutionList = generateValidTWiseConfigurations(repEvo0);
+        var oldCoverage = calculateCoverage(cnfEvo0, solutionList);
+        System.out.println("\nOLD COVERAGE (Should be 1.0) = " + oldCoverage + "\n");
 
         YASA yasa = new YASA();
-        yasa.setSolver(new Sat4JSolver(repEvo.get(CNFProvider.fromFormula())));
+        yasa.setSolver(new Sat4JSolver(repEvo1.get(CNFProvider.fromFormula())));
         var monitor = new NullMonitor();
         yasa.init2(monitor);
 
         solutionList.getSolutions().forEach(s -> {
-            checkConfigurationOnNextEvolution(rep, repEvo, formulaEvo, s);
-            yasa.newConfiguration(IntStream.of(s.getLiterals()).filter(i -> i != 0).toArray());
+            System.out.println("############# SOLUTION START ###############");
+            var isValid = checkConfigurationOnNextEvolution(repEvo0, repEvo1, formulaEvo, s);
+            var oldConfiguration = IntStream.of(s.getLiterals()).filter(i -> i != 0).toArray();
+            var nextConfiguration = remapItemsByName(oldConfiguration, cnfEvo0, cnfEvo1, 0);
+            if (PRINT_CONFIG_EXTENDED) {
+                System.out.println("OLD CONFIG");
+                printConfigurationWithName(oldConfiguration, cnfEvo0);
+                System.out.println("NEXT CONFIG");
+                printConfigurationWithName(nextConfiguration, cnfEvo1);
+            }
+            yasa.newConfiguration(nextConfiguration);
+            System.out.println("############## SOLUTION END ################");
         });
 
         yasa.buildConfigurations(monitor);
         // New sample from partial configuration
         var newSample = StreamSupport.stream(yasa, false).collect(Collectors.toCollection(ArrayList::new));
-        System.out.println("NEW SAMPLE");
+        System.out.println("\nNEW SAMPLE");
         System.out.println(newSample);
 
         // Calculate coverage
-        var newSolutions = new SolutionList(repEvo.getVariables(), newSample);
-        calculateCoverage(repEvo.get(CNFProvider.fromFormula()), newSolutions);
+        var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
+        System.out.println("\nNEW COVERAGE = " + calculateCoverage(repEvo1.get(CNFProvider.fromFormula()), newSolutions) + " | Old Coverage = " + oldCoverage + "\n");
     }
+
     private static void printCNF(CNF cnf) {
         System.out.println("++++++ CNF START +++++\n");
         AtomicInteger idx = new AtomicInteger(0);
@@ -89,6 +112,39 @@ public class EvolutionTest {
             }
         });
         System.out.println("\n++++++ CNF END +++++");
+    }
+
+    private static void printConfigurationWithName(int[] assignment, CNF cnf) {
+        var builder = new StringBuilder();
+        builder.append("+++++++++CONFIGURATION++++++++++++++++++\n")
+                .append("Config  => ").append(Arrays.toString(assignment)).append("\n")
+                .append("Stats   => [size=").append(assignment.length).append("]\n")
+                .append("Mapping => | ");
+        for (int l : assignment) {
+            builder.append(Math.abs(l))
+                    .append(" = ")
+                    .append(cnf.getVariableMap().getVariableName(Math.abs(l)).orElse("No name found"))
+                    .append(" | ");
+        }
+        builder.append("\n");
+        builder.append("+++++++++CONFIGURATION++++++++++++++++++\n");
+        System.out.println(builder);
+    }
+
+    private static int[] remapItemsByName(int[] oldConfiguration, CNF cnfOld, CNF cnfNext, int defaultValue) {
+        var nextAssignment = new int[cnfNext.getVariableMap().getVariableCount()];
+        for (var nextIndex = 0; nextIndex < cnfNext.getVariableMap().getVariableCount(); nextIndex++) {
+            nextAssignment[nextIndex] = (int) getOldOrDefaultValue(nextIndex, oldConfiguration, cnfOld, cnfNext, defaultValue);
+        }
+        return Arrays.stream(nextAssignment).filter(i -> i != 0).toArray();
+    }
+
+    private static Object getOldOrDefaultValue(int nextIndex, int[] oldAssignment, CNF cnfOld, CNF cnfNext, Object defaultValue) {
+        var nextVarName = cnfNext.getVariableMap().getVariableName(nextIndex + 1);
+        if (nextVarName.isEmpty()) return defaultValue;
+        var oldIndex = cnfOld.getVariableMap().getVariableIndex(nextVarName.get());
+        if (oldIndex.isEmpty()) return defaultValue;
+        return oldAssignment[oldIndex.get() - 1] > 0 ? nextIndex + 1 : -(nextIndex + 1);
     }
 
     /**
@@ -112,8 +168,8 @@ public class EvolutionTest {
         return assignment;
     }
 
-    private static void checkConfigurationOnNextEvolution(ModelRepresentation rep,
-                                                          ModelRepresentation repEvo, Formula formula, LiteralList s) {
+    private static boolean checkConfigurationOnNextEvolution(ModelRepresentation rep,
+                                                             ModelRepresentation repEvo, Formula formula, LiteralList s) {
         List<LiteralList> assumptions = new ArrayList<>();
         ContradictionAnalysis contra = new ContradictionAnalysis();
 
@@ -129,7 +185,7 @@ public class EvolutionTest {
                 .orElse(false); //TODO: orElse false gleich richtig? Was bedeuetet no value present here?
         System.out.println("Is configuration valid = "
                 + isFormulaValid); //evaluate => search for solution, each solution = one configuration
-        if (isFormulaValid) return;
+        if (isFormulaValid) return isFormulaValid;
 
         formula.getChildren().forEach(clause -> {
             boolean isValid = (boolean) Formulas.evaluate(clause, a)
@@ -155,10 +211,11 @@ public class EvolutionTest {
         }
         Boolean canBeValid = repEvo.get(sat);
         System.out.println(s);
-        System.out.println("HasSolutionAnalysis = " + canBeValid + "\n");
+        System.out.println("Is CNF satisfiable? CanBeValid = " + canBeValid + "\n");
+        return isFormulaValid;
     }
 
-    private static void calculateCoverage(CNF cnf, SolutionList solutionList) {
+    private static double calculateCoverage(CNF cnf, SolutionList solutionList) {
         TWiseConfigurationUtil util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
         TWiseStatisticGenerator stat = new TWiseStatisticGenerator(util);
 
@@ -169,7 +226,7 @@ public class EvolutionTest {
         var coverage = stat.getCoverage(List.of(solutionList.getSolutions()),
                 pcManager.getGroupedPresenceConditions(), 2
                 , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
-        System.out.println("NEW COVERAGE: " + coverage.get(0).getCoverage());
+        return coverage.get(0).getCoverage();
     }
 
     private static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
