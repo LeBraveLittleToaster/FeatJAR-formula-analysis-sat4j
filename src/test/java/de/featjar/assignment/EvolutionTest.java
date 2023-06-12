@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -40,7 +41,6 @@ public class EvolutionTest {
 
     private static ModelRepresentation repEvo0;
     private static ModelRepresentation repEvo1;
-
     private static CNF cnfEvo0;
     private static CNF cnfEvo1;
     private static SolutionList solutionList;
@@ -71,13 +71,13 @@ public class EvolutionTest {
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo1_simple.xml"))
                 .orElse(Logger::logProblems);
 */
+
         repEvo0 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_evo0.xml"))
                 .orElse(Logger::logProblems);
         repEvo1 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_evo1.xml"))
                 .orElse(Logger::logProblems);
-
 /*
         repEvo0 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_car_evo0.xml"))
@@ -117,27 +117,43 @@ public class EvolutionTest {
 
     @Test
     public void testTry() {
-        long timeCounter = 0;
+        AtomicLong timerCounterCheckConfiguration = new AtomicLong();
+        AtomicLong timerRemapping = new AtomicLong();
+        AtomicLong timerNewConfiguration = new AtomicLong();
+        AtomicLong timerBuildAndSample = new AtomicLong();
+
+        AtomicLong timeStamp = new AtomicLong(System.nanoTime());
 
         solutionList.getSolutions().forEach(s -> {
             if (PRINT_SOLUTION_AND_CONFIGURATION) {
                 System.out.println("############# SOLUTION START ###############");
             }
+
+            timeStamp.set(System.nanoTime());
             var isValid = checkConfigurationOnNextEvolution(repEvo1, formulaEvo, s);
+            timerCounterCheckConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
+
+            timeStamp.set(System.nanoTime());
             var oldConfigurationWithZeros = IntStream.of(s.getLiterals()).toArray();
             var nextConfiguration = remapItemsByName(oldConfigurationWithZeros, cnfEvo0, cnfEvo1);
+            timerRemapping.addAndGet(System.nanoTime() - timeStamp.get());
+
             if (PRINT_CONFIG_EXTENDED && !isValid) {
                 System.out.println("OLD CONFIG");
                 printConfigurationWithName(oldConfigurationWithZeros, cnfEvo0);
                 System.out.println("NEXT CONFIG");
                 printConfigurationWithName(nextConfiguration, cnfEvo1);
             }
+
+            timeStamp.set(System.nanoTime());
             yasa.newConfiguration(nextConfiguration);
+            timerNewConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
             if (PRINT_SOLUTION_AND_CONFIGURATION) {
                 System.out.println("############## SOLUTION END ################");
             }
         });
 
+        timeStamp.set(System.nanoTime());
         // New sample from partial configuration
         yasa.buildConfigurations(monitor);
         var newSample = StreamSupport.stream(yasa, false).collect(Collectors.toCollection(ArrayList::new));
@@ -149,9 +165,16 @@ public class EvolutionTest {
 
         // Calculate coverage
         var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
+        timerBuildAndSample.addAndGet(System.nanoTime() - timeStamp.get());
         System.out.println("\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = " + oldCoverage + "\n");
 
 
+        System.out.println("\nTIMERS:");
+
+        System.out.println("Timer CheckConfig      = " + (timerCounterCheckConfiguration.get() / 1e6) + " sec");
+        System.out.println("Timer Remappong        = " + (timerRemapping.get() / 1e6) + " sec");
+        System.out.println("Timer New Config       = " + (timerNewConfiguration.get() / 1e6) + " sec");
+        System.out.println("Timer Build and Sample = " + (timerBuildAndSample.get() / 1e6) + " sec");
     }
 
     private static int[] remapItemsByName(int[] oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
@@ -212,6 +235,7 @@ public class EvolutionTest {
             }
         });
 
+        /*
         HasSolutionAnalysis sat = new HasSolutionAnalysis();
         Assignment assumptions2 = contra.getAssumptions();
         for (int l : s.getLiterals()) {
@@ -228,6 +252,7 @@ public class EvolutionTest {
             System.out.println(s);
             System.out.println("Is CNF satisfiable? CanBeValid = " + canBeValid + "\n");
         }
+        */
         return false;
     }
 
@@ -278,25 +303,5 @@ public class EvolutionTest {
         builder.append("\n");
         builder.append("+++++++++CONFIGURATION++++++++++++++++++\n");
         System.out.println(builder);
-    }
-}
-
-class StopWatch{
-    enum StopWatchType{
-        SAMPLING,
-        REFORMATTING
-    }
-    private long lastNano;
-
-    private EnumMap<StopWatchType, Long> watches;
-
-    private
-
-    StopWatch(){
-        lastNano = System.nanoTime();
-    }
-
-    public long addToWatch(StopWatchType stopWatchType){
-        return 0;
     }
 }
