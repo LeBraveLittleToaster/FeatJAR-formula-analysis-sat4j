@@ -157,24 +157,25 @@ public class EvolutionTest {
         // New sample from partial configuration
         yasa.buildConfigurations(monitor);
         var newSample = StreamSupport.stream(yasa, false).collect(Collectors.toCollection(ArrayList::new));
+        timerBuildAndSample.addAndGet(System.nanoTime() - timeStamp.get());
 
         if (PRINT_NEW_SAMPLE) {
             System.out.println("\nNEW SAMPLE");
             System.out.println(newSample);
         }
 
-        // Calculate coverage
         var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
-        timerBuildAndSample.addAndGet(System.nanoTime() - timeStamp.get());
+
+        // Calculate coverage
         System.out.println("\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = " + oldCoverage + "\n");
 
-
-        System.out.println("\nTIMERS:");
-
-        System.out.println("Timer CheckConfig      = " + (timerCounterCheckConfiguration.get() / 1e6) + " sec");
-        System.out.println("Timer Remappong        = " + (timerRemapping.get() / 1e6) + " sec");
-        System.out.println("Timer New Config       = " + (timerNewConfiguration.get() / 1e6) + " sec");
-        System.out.println("Timer Build and Sample = " + (timerBuildAndSample.get() / 1e6) + " sec");
+        System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++");
+        var totalTime = timerCounterCheckConfiguration.get() + timerRemapping.get() + timerNewConfiguration.get() + timerBuildAndSample.get();
+        System.out.println("Timer total            = " + (totalTime / 1e6) + " ms\n");
+        System.out.println("Timer CheckConfig      = " + (timerCounterCheckConfiguration.get() / 1e6) + " ms");
+        System.out.println("Timer Remappong        = " + (timerRemapping.get() / 1e6) + " ms");
+        System.out.println("Timer New Config       = " + (timerNewConfiguration.get() / 1e6) + " ms");
+        System.out.println("Timer Build and Sample = " + (timerBuildAndSample.get() / 1e6) + " ms");
     }
 
     private static int[] remapItemsByName(int[] oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
