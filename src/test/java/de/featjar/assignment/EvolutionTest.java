@@ -17,11 +17,13 @@ import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.util.extension.ExtensionLoader;
 import de.featjar.util.job.NullMonitor;
 import de.featjar.util.logging.Logger;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -31,50 +33,96 @@ import java.util.stream.StreamSupport;
 public class EvolutionTest {
 
     private static boolean PRINT_CNFS = false;
-    private static boolean PRINT_CONFIG_EXTENDED = true;
+    private static boolean PRINT_CONFIG_EXTENDED = false;
+    private static boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
+    private static boolean PRINT_NEW_SAMPLE = false;
 
-    @Test
-    public void testTry() {
+
+    private static ModelRepresentation repEvo0;
+    private static ModelRepresentation repEvo1;
+
+    private static CNF cnfEvo0;
+    private static CNF cnfEvo1;
+    private static SolutionList solutionList;
+    private static double oldCoverage;
+    private static Formula formulaEvo;
+    private static YASA yasa;
+    private static NullMonitor monitor;
+
+
+    @BeforeAll
+    public static void readModelRepresentations() {
         ExtensionLoader.load();
         //ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get("C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/GPL/model.xml")).orElse(Logger::logProblems);
 
-        ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get(
+/*
+        repEvo0 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e0.xml"))
                 .orElse(Logger::logProblems);
-        ModelRepresentation repEvo1 = ModelRepresentation.load(Paths.get(
+        repEvo1 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e1.xml"))
                 .orElse(Logger::logProblems);
 
-        /*ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get(
+
+        repEvo0 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo0.xml"))
                 .orElse(Logger::logProblems);
-        ModelRepresentation repEvo1 = ModelRepresentation.load(Paths.get(
+        repEvo1 = ModelRepresentation.load(Paths.get(
                         "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo1_simple.xml"))
-                .orElse(Logger::logProblems);*/
+                .orElse(Logger::logProblems);
+*/
+        repEvo0 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_evo0.xml"))
+                .orElse(Logger::logProblems);
+        repEvo1 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_evo1.xml"))
+                .orElse(Logger::logProblems);
+
+/*
+        repEvo0 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_car_evo0.xml"))
+                .orElse(Logger::logProblems);
+        repEvo1 = ModelRepresentation.load(Paths.get(
+                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_ma_car_evo1.xml"))
+                .orElse(Logger::logProblems);
+*/
+
 
         // Evolution Step 0
-        CNF cnfEvo0 = repEvo0.get(CNFProvider.fromFormula());
+        cnfEvo0 = repEvo0.get(CNFProvider.fromFormula());
 
         // Evolution Step 1
-        CNF cnfEvo1 = repEvo1.get(CNFProvider.fromFormula());
-        Formula formulaEvo = repEvo1.getFormula();
+        cnfEvo1 = repEvo1.get(CNFProvider.fromFormula());
+        formulaEvo = repEvo1.getFormula();
 
         if (PRINT_CNFS) {
             printCNF(cnfEvo0);
             printCNF(cnfEvo1);
         }
 
-        SolutionList solutionList = generateValidTWiseConfigurations(repEvo0);
-        var oldCoverage = calculateCoverage(cnfEvo0, solutionList);
+        solutionList = generateValidTWiseConfigurations(repEvo0);
+        oldCoverage = calculateCoverage(cnfEvo0, solutionList);
         System.out.println("\nOLD COVERAGE (Should be 1.0) = " + oldCoverage + "\n");
 
-        YASA yasa = new YASA();
+        yasa = new YASA();
         yasa.setSolver(new Sat4JSolver(cnfEvo1));
-        var monitor = new NullMonitor();
+        monitor = new NullMonitor();
         yasa.init2(monitor);
+    }
+
+    @Test
+    public void testRuntime() {
+        generateValidTWiseConfigurations(repEvo0);
+    }
+
+    @Test
+    public void testTry() {
+        long timeCounter = 0;
 
         solutionList.getSolutions().forEach(s -> {
-            System.out.println("############# SOLUTION START ###############");
+            if (PRINT_SOLUTION_AND_CONFIGURATION) {
+                System.out.println("############# SOLUTION START ###############");
+            }
             var isValid = checkConfigurationOnNextEvolution(repEvo1, formulaEvo, s);
             var oldConfigurationWithZeros = IntStream.of(s.getLiterals()).toArray();
             var nextConfiguration = remapItemsByName(oldConfigurationWithZeros, cnfEvo0, cnfEvo1);
@@ -85,18 +133,25 @@ public class EvolutionTest {
                 printConfigurationWithName(nextConfiguration, cnfEvo1);
             }
             yasa.newConfiguration(nextConfiguration);
-            System.out.println("############## SOLUTION END ################");
+            if (PRINT_SOLUTION_AND_CONFIGURATION) {
+                System.out.println("############## SOLUTION END ################");
+            }
         });
 
         // New sample from partial configuration
         yasa.buildConfigurations(monitor);
         var newSample = StreamSupport.stream(yasa, false).collect(Collectors.toCollection(ArrayList::new));
-        System.out.println("\nNEW SAMPLE");
-        System.out.println(newSample);
+
+        if (PRINT_NEW_SAMPLE) {
+            System.out.println("\nNEW SAMPLE");
+            System.out.println(newSample);
+        }
 
         // Calculate coverage
         var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
         System.out.println("\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = " + oldCoverage + "\n");
+
+
     }
 
     private static int[] remapItemsByName(int[] oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
@@ -126,26 +181,13 @@ public class EvolutionTest {
         return nextAssignment.stream().mapToInt(i -> i).toArray();
     }
 
-    private static int getOldOrDefaultValue(int nextIndex, List<Integer> oldAssignment, CNF cnfOld, CNF cnfNext) {
-        var defaultValue = 0;
-        var nextVarName = cnfNext.getVariableMap().getVariableName(nextIndex + 1);
-        if (nextVarName.isEmpty()) return defaultValue;
-        var oldIndex = cnfOld.getVariableMap().getVariableIndex(nextVarName.get());
-        if (oldIndex.isEmpty()) return defaultValue;
-        for (int oldValue :
-                oldAssignment) {
-            if (oldValue == oldIndex.get() || oldValue == -oldIndex.get()) {
-                return oldValue;
-            }
-        }
-        return defaultValue;
-    }
-
     private static boolean checkConfigurationOnNextEvolution(ModelRepresentation repEvo, Formula formula, LiteralList s) {
         List<LiteralList> assumptions = new ArrayList<>();
         ContradictionAnalysis contra = new ContradictionAnalysis();
 
-        System.out.println(Arrays.toString(s.getLiterals()));
+        if (PRINT_SOLUTION_AND_CONFIGURATION) {
+            System.out.println(Arrays.toString(s.getLiterals()));
+        }
         IndexAssignment a = new IndexAssignment();
         for (int l : s.getLiterals()) {
             a.set(Math.abs(l), l > 0);
@@ -154,7 +196,10 @@ public class EvolutionTest {
         contra.setClauseList(assumptions);
 
         boolean isFormulaValid = (boolean) Formulas.evaluate(formula, a).orElse(false);
-        System.out.println("Is configuration valid = " + isFormulaValid);
+        if (PRINT_SOLUTION_AND_CONFIGURATION) {
+
+            System.out.println("Is configuration valid = " + isFormulaValid);
+        }
 
         if (isFormulaValid) return true;
 
@@ -179,8 +224,10 @@ public class EvolutionTest {
             }
         }
         Boolean canBeValid = repEvo.get(sat);
-        System.out.println(s);
-        System.out.println("Is CNF satisfiable? CanBeValid = " + canBeValid + "\n");
+        if (PRINT_SOLUTION_AND_CONFIGURATION) {
+            System.out.println(s);
+            System.out.println("Is CNF satisfiable? CanBeValid = " + canBeValid + "\n");
+        }
         return false;
     }
 
@@ -231,5 +278,25 @@ public class EvolutionTest {
         builder.append("\n");
         builder.append("+++++++++CONFIGURATION++++++++++++++++++\n");
         System.out.println(builder);
+    }
+}
+
+class StopWatch{
+    enum StopWatchType{
+        SAMPLING,
+        REFORMATTING
+    }
+    private long lastNano;
+
+    private EnumMap<StopWatchType, Long> watches;
+
+    private
+
+    StopWatch(){
+        lastNano = System.nanoTime();
+    }
+
+    public long addToWatch(StopWatchType stopWatchType){
+        return 0;
     }
 }
