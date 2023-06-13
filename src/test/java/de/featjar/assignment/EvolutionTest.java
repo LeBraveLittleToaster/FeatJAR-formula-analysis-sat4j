@@ -7,23 +7,21 @@ import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationUtil;
 import de.featjar.analysis.sat4j.twise.TWiseStatisticGenerator;
 import de.featjar.analysis.sat4j.twise.YASA;
+import de.featjar.assignment.DataLoader.Dataset;
+import de.featjar.assignment.DataLoader.EvolutionSet;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.CNFProvider;
 import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
-import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.Formula;
 import de.featjar.formula.structure.Formulas;
 import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.util.extension.ExtensionLoader;
 import de.featjar.util.job.NullMonitor;
-import de.featjar.util.logging.Logger;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -39,8 +37,7 @@ public class EvolutionTest {
   private static boolean PRINT_NEW_SAMPLE = false;
 
 
-  private static ModelRepresentation repEvo0;
-  private static ModelRepresentation repEvo1;
+  private static EvolutionSet evoSet;
   private static CNF cnfEvo0;
   private static CNF cnfEvo1;
   private static SolutionList solutionList;
@@ -53,68 +50,25 @@ public class EvolutionTest {
   @BeforeAll
   public static void readModelRepresentations() {
     ExtensionLoader.load();
-    //ModelRepresentation repEvo0 = ModelRepresentation.load(Paths.get("C:/Users/gamef/Documents/GitHub/FeatJAR/formula-analysis-sat4j/src/test/resources/GPL/model.xml")).orElse(Logger::logProblems);
 
-/*
-        repEvo0 = ModelRepresentation.load(Paths.get(
-                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e0.xml"))
-                .orElse(Logger::logProblems);
-        repEvo1 = ModelRepresentation.load(Paths.get(
-                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/m_simple_e1.xml"))
-                .orElse(Logger::logProblems);
-
-
-        repEvo0 = ModelRepresentation.load(Paths.get(
-                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo0.xml"))
-                .orElse(Logger::logProblems);
-        repEvo1 = ModelRepresentation.load(Paths.get(
-                        "C:/Users/gamef/Documents/GitHub/FeatJAR/FeatJAR/formula-analysis-sat4j/src/test/resources/MA_PS/model_evo1_simple.xml"))
-                .orElse(Logger::logProblems);
- */
-    System.out.println("Loading Dataset Evolution Step 0...");
-    repEvo0 = ModelRepresentation.load(Paths.get(
-            "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\berkeley_db_model_evo0.xml"))
-        .orElse(Logger::logProblems);
-    System.out.println("Loading Dataset Evolution Step 1...");
-    repEvo1 = ModelRepresentation.load(Paths.get(
-            "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\berkeley_db_model_evo1.xml"))
-        .orElse(Logger::logProblems);
-
-/*
-    System.out.println("Loading Dataset Evolution Step 0...");
-    repEvo0 = ModelRepresentation.load(Paths.get(
-            "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\model_ma_evo0.xml"))
-        .orElse(Logger::logProblems);
-    System.out.println("Loading Dataset Evolution Step 1...");
-    repEvo1 = ModelRepresentation.load(Paths.get(
-            "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\model_ma_evo1.xml"))
-        .orElse(Logger::logProblems);
-
-        System.out.println("Loading Dataset Evolution Step 0...");
-        repEvo0 = ModelRepresentation.load(Paths.get(
-                        "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\model_ma_car_evo0.xml"))
-                .orElse(Logger::logProblems);
-        System.out.println("Loading Dataset Evolution Step 1...");
-        repEvo1 = ModelRepresentation.load(Paths.get(
-                        "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\MA_PS\\model_ma_car_evo1.xml"))
-                .orElse(Logger::logProblems);
-*/
+    evoSet = DataLoader.getEvolutionSet(Dataset.BERKELEY,
+        "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\");
 
     System.out.println("Retrieving CNFs...");
     // Evolution Step 0
-    cnfEvo0 = repEvo0.get(CNFProvider.fromFormula());
+    cnfEvo0 = evoSet.repEvo0.get(CNFProvider.fromFormula());
 
     // Evolution Step 1
-    cnfEvo1 = repEvo1.get(CNFProvider.fromFormula());
-    formulaEvo = repEvo1.getFormula();
+    cnfEvo1 = evoSet.repEvo1.get(CNFProvider.fromFormula());
+    formulaEvo = evoSet.repEvo1.getFormula();
 
     if (PRINT_CNFS) {
-      printCNF(cnfEvo0);
-      printCNF(cnfEvo1);
+      EntityPrinter.printCNF(cnfEvo0);
+      EntityPrinter.printCNF(cnfEvo1);
     }
 
     System.out.println("Generating valid sample for evo 0...");
-    solutionList = generateValidTWiseConfigurations(repEvo0);
+    solutionList = EntityPrinter.generateValidTWiseConfigurations(evoSet.repEvo0);
     System.out.println("Calculating coverage...");
     oldCoverage = calculateCoverage(cnfEvo0, solutionList);
     System.out.println("\nOLD COVERAGE (Should be 1.0) = " + oldCoverage + "\n");
@@ -127,30 +81,50 @@ public class EvolutionTest {
   }
 
   @Test
-  public void testRuntime() {
-    generateValidTWiseConfigurations(repEvo0);
+  public void testGenerateSample() {
+    AtomicLong timerTwise = new AtomicLong(System.nanoTime());
+    EntityPrinter.generateValidTWiseConfigurations(evoSet.repEvo0);
+    System.out.println("\n+++++++++++++++++++++++++\n");
+    System.out.println(
+        "Timer generate complete new Twise Sample = " + ((System.nanoTime() - timerTwise.get()) / 1e6) + " ms");
+    System.out.println("\n+++++++++++++++++++++++++\n");
   }
 
   @Test
-  public void testTry() {
+  public void testRepairSample() {
+    AtomicLong counterZeros = new AtomicLong();
+    AtomicLong counterNonZeros = new AtomicLong();
     AtomicLong timerCounterCheckConfiguration = new AtomicLong();
     AtomicLong timerRemapping = new AtomicLong();
     AtomicLong timerNewConfiguration = new AtomicLong();
     AtomicLong timerBuildAndSample = new AtomicLong();
 
     System.out.println(
-        "Starting solution analysis (total count=" + solutionList.getSolutions().size() + ")...");
+        "Starting solution analysis (solution count=" + solutionList.getSolutions().size()
+            + ")...");
 
     AtomicLong timeStamp = new AtomicLong(System.nanoTime());
     solutionList.getSolutions().forEach(s -> {
+
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
         System.out.println("############# SOLUTION START ###############");
       }
 
+      // use configuration from Evo0 in Evo1
       timeStamp.set(System.nanoTime());
-      var isValid = checkConfigurationOnNextEvolution(repEvo1, formulaEvo, s);
+      var isValid = validateEvo0ConfigWithEvo1(formulaEvo, s);
       timerCounterCheckConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
 
+      // counting zeros for stats
+      IntStream.of(s.getLiterals()).forEach(v -> {
+        if (v == 0) {
+          counterZeros.addAndGet(1);
+        }
+        {
+          counterNonZeros.addAndGet(1);
+        }
+      });
+      // remap configuration to fit next evolution step
       timeStamp.set(System.nanoTime());
       var oldConfigurationWithZeros = IntStream.of(s.getLiterals()).toArray();
       var nextConfiguration = remapItemsByName(oldConfigurationWithZeros, cnfEvo0, cnfEvo1);
@@ -158,14 +132,16 @@ public class EvolutionTest {
 
       if (PRINT_CONFIG_EXTENDED && !isValid) {
         System.out.println("OLD CONFIG");
-        printConfigurationWithName(oldConfigurationWithZeros, cnfEvo0);
+        EntityPrinter.printConfigurationWithName(oldConfigurationWithZeros, cnfEvo0);
         System.out.println("NEXT CONFIG");
-        printConfigurationWithName(nextConfiguration, cnfEvo1);
+        EntityPrinter.printConfigurationWithName(nextConfiguration, cnfEvo1);
       }
 
+      // insert partial config into yasa
       timeStamp.set(System.nanoTime());
       yasa.newConfiguration(nextConfiguration);
       timerNewConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
+
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
         System.out.println("############## SOLUTION END ################");
       }
@@ -174,7 +150,7 @@ public class EvolutionTest {
 
     System.out.println("Building new solutions...");
     timeStamp.set(System.nanoTime());
-    // New sample from partial configuration
+    // build sample from partial configurations
     yasa.buildConfigurations(monitor);
     var newSample = StreamSupport.stream(yasa, false)
         .collect(Collectors.toCollection(ArrayList::new));
@@ -185,24 +161,18 @@ public class EvolutionTest {
       System.out.println(newSample);
     }
 
-    var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
+    var newSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSample);
 
     // Calculate coverage
     System.out.println(
         "\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = "
             + oldCoverage + "\n");
 
-    System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++");
-    var totalTime =
-        timerCounterCheckConfiguration.get() + timerRemapping.get() + timerNewConfiguration.get()
-            + timerBuildAndSample.get();
-    System.out.println("Timer total            = " + (totalTime / 1e6) + " ms\n");
-    System.out.println(
-        "Timer CheckConfig      = " + (timerCounterCheckConfiguration.get() / 1e6) + " ms");
-    System.out.println("Timer Remappong        = " + (timerRemapping.get() / 1e6) + " ms");
-    System.out.println("Timer New Config       = " + (timerNewConfiguration.get() / 1e6) + " ms");
-    System.out.println("Timer Build and Sample = " + (timerBuildAndSample.get() / 1e6) + " ms");
+    EntityPrinter.printStats(timerCounterCheckConfiguration, timerRemapping,
+        timerNewConfiguration,
+        timerBuildAndSample, counterZeros, counterNonZeros);
   }
+
 
   private static int[] remapItemsByName(int[] oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
     var nextAssignment = new ArrayList<Integer>();
@@ -239,8 +209,7 @@ public class EvolutionTest {
     return nextAssignment.stream().mapToInt(i -> i).toArray();
   }
 
-  private static boolean checkConfigurationOnNextEvolution(ModelRepresentation repEvo,
-      Formula formula, LiteralList s) {
+  private static boolean validateEvo0ConfigWithEvo1(Formula formula, LiteralList s) {
     List<LiteralList> assumptions = new ArrayList<>();
     ContradictionAnalysis contra = new ContradictionAnalysis();
 
@@ -272,7 +241,7 @@ public class EvolutionTest {
         });
       }
     });
-    
+
     return false;
   }
 
@@ -288,40 +257,5 @@ public class EvolutionTest {
         pcManager.getGroupedPresenceConditions(), 2
         , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
     return coverage.get(0).getCoverage();
-  }
-
-  private static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
-    TWiseConfigurationGenerator twisegen = new TWiseConfigurationGenerator();
-    twisegen.setT(2);
-    return rep.get(twisegen);
-  }
-
-  private static void printCNF(CNF cnf) {
-    System.out.println("++++++ CNF START +++++\n");
-    AtomicInteger idx = new AtomicInteger(0);
-    cnf.getClauses().forEach(clause -> {
-      System.out.println("[" + idx.getAndIncrement() + "] " + clause);
-      for (int literal : clause.getLiterals()) {
-        System.out.println("\t" + cnf.getVariableMap().getVariableName(Math.abs(literal)).get());
-      }
-    });
-    System.out.println("\n++++++ CNF END +++++");
-  }
-
-  private static void printConfigurationWithName(int[] assignment, CNF cnf) {
-    var builder = new StringBuilder();
-    builder.append("+++++++++CONFIGURATION++++++++++++++++++\n")
-        .append("Config  => ").append(Arrays.toString(assignment)).append("\n")
-        .append("Stats   => [size=").append(assignment.length).append("]\n")
-        .append("Mapping => | ");
-    for (int l : assignment) {
-      builder.append(Math.abs(l))
-          .append(" = ")
-          .append(cnf.getVariableMap().getVariableName(Math.abs(l)).orElse("No name found"))
-          .append(" | ");
-    }
-    builder.append("\n");
-    builder.append("+++++++++CONFIGURATION++++++++++++++++++\n");
-    System.out.println(builder);
   }
 }
