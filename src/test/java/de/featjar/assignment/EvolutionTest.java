@@ -22,6 +22,7 @@ import de.featjar.util.job.NullMonitor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -31,7 +32,7 @@ import org.junit.jupiter.api.Test;
 
 public class EvolutionTest {
 
-  private static Dataset DATASET = Dataset.BERKELEY;
+  private static Dataset DATASET = Dataset.MODEL_MA;
   private static String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
   private static boolean PRINT_CNFS = false;
   private static boolean PRINT_CONFIG_EXTENDED = false;
@@ -111,14 +112,18 @@ public class EvolutionTest {
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
         System.out.println("############# SOLUTION START ###############");
       }
-
-      // use configuration from Evo0 in Evo1
       timeStamp.set(System.nanoTime());
-      var isValid = validateEvo0ConfigWithEvo1(formulaEvo, s);
+      var remappedConfig = remapItemsByName(IntStream.of(s.getLiterals()).toArray(), cnfEvo0, cnfEvo1);
+      timerRemapping.addAndGet(System.nanoTime() - timeStamp.get());
+
+      timeStamp.set(System.nanoTime());
+      var isValid = validateEvo0ConfigWithEvo1(formulaEvo, remappedConfig);
       timerCounterCheckConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
 
-      // counting zeros for stats
-      IntStream.of(s.getLiterals()).forEach(v -> {
+      if(isValid.isEmpty()) return;
+
+      var nextConfigurationWithZeros = isValid.get();
+      IntStream.of(nextConfigurationWithZeros).forEach(v -> {
         if (v == 0) {
           counterZeros.addAndGet(1);
         }
@@ -126,21 +131,19 @@ public class EvolutionTest {
           counterNonZeros.addAndGet(1);
         }
       });
-      // remap configuration to fit next evolution step
-      timeStamp.set(System.nanoTime());
-      var oldConfigurationWithZeros = IntStream.of(s.getLiterals()).toArray();
-      var nextConfiguration = remapItemsByName(oldConfigurationWithZeros, cnfEvo0, cnfEvo1);
-      timerRemapping.addAndGet(System.nanoTime() - timeStamp.get());
 
-      if (PRINT_CONFIG_EXTENDED && !isValid) {
+      if (PRINT_CONFIG_EXTENDED) {
+
         System.out.println("OLD CONFIG");
-        EntityPrinter.printConfigurationWithName(oldConfigurationWithZeros, cnfEvo0);
+        EntityPrinter.printConfigurationWithName(s.getLiterals(), cnfEvo0);
         System.out.println("NEXT CONFIG");
-        EntityPrinter.printConfigurationWithName(nextConfiguration, cnfEvo1);
+        EntityPrinter.printConfigurationWithName(nextConfigurationWithZeros, cnfEvo1);
       }
+
 
       // insert partial config into yasa
       timeStamp.set(System.nanoTime());
+      var nextConfiguration = IntStream.of(isValid.get()).filter(i -> i != 0).toArray();
       yasa.newConfiguration(nextConfiguration);
       timerNewConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
 
@@ -211,15 +214,15 @@ public class EvolutionTest {
     return nextAssignment.stream().mapToInt(i -> i).toArray();
   }
 
-  private static boolean validateEvo0ConfigWithEvo1(Formula formula, LiteralList s) {
+  private static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, int[] s) {
     List<LiteralList> assumptions = new ArrayList<>();
     ContradictionAnalysis contra = new ContradictionAnalysis();
 
     if (PRINT_SOLUTION_AND_CONFIGURATION) {
-      System.out.println(Arrays.toString(s.getLiterals()));
+      System.out.println(Arrays.toString(s));
     }
     IndexAssignment a = new IndexAssignment();
-    for (int l : s.getLiterals()) {
+    for (int l : s) {
       a.set(Math.abs(l), l > 0);
       assumptions.add(new LiteralList(l));
     }
@@ -232,19 +235,19 @@ public class EvolutionTest {
     }
 
     if (isFormulaValid) {
-      return true;
+      return Optional.empty();
     }
 
     formula.getChildren().forEach(clause -> {
       boolean isValid = (boolean) Formulas.evaluate(clause, a).orElse(false);
       if (!isValid) {
         Formulas.getVariables(clause).forEach(variable -> {
-          s.getLiterals()[variable.getIndex() - 1] = 0;
+          s[variable.getIndex() - 1] = 0;
         });
       }
     });
 
-    return false;
+    return Optional.of(s);
   }
 
   private static double calculateCoverage(CNF cnf, SolutionList solutionList) {
