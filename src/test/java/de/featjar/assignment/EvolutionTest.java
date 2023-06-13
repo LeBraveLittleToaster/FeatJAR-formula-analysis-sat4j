@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 
 public class EvolutionTest {
 
+  private static Dataset DATASET = Dataset.BERKELEY;
+  private static String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
   private static boolean PRINT_CNFS = false;
   private static boolean PRINT_CONFIG_EXTENDED = false;
   private static boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
@@ -51,8 +53,7 @@ public class EvolutionTest {
   public static void readModelRepresentations() {
     ExtensionLoader.load();
 
-    evoSet = DataLoader.getEvolutionSet(Dataset.BERKELEY,
-        "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\");
+    evoSet = DataLoader.getEvolutionSet(DATASET, absolutPathPrefix);
 
     System.out.println("Retrieving CNFs...");
     // Evolution Step 0
@@ -86,7 +87,8 @@ public class EvolutionTest {
     EntityPrinter.generateValidTWiseConfigurations(evoSet.repEvo0);
     System.out.println("\n+++++++++++++++++++++++++\n");
     System.out.println(
-        "Timer generate complete new Twise Sample = " + ((System.nanoTime() - timerTwise.get()) / 1e6) + " ms");
+        "Timer generate complete new Twise Sample = " + ((System.nanoTime() - timerTwise.get())
+            / 1e6) + " ms");
     System.out.println("\n+++++++++++++++++++++++++\n");
   }
 
