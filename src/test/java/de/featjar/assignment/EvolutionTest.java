@@ -1,5 +1,11 @@
 package de.featjar.assignment;
 
+import static de.featjar.assignment.TimerCollection.TimerType.BUILD_CONFIGURATIONS;
+import static de.featjar.assignment.TimerCollection.TimerType.CHECK_CONFIGURATION;
+import static de.featjar.assignment.TimerCollection.TimerType.NEW_CONFIGURATION;
+import static de.featjar.assignment.TimerCollection.TimerType.NEXT_CONFIGURATION;
+import static de.featjar.assignment.TimerCollection.TimerType.REMAPPING;
+
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.PresenceConditionManager;
@@ -32,12 +38,12 @@ import org.junit.jupiter.api.Test;
 
 public class EvolutionTest {
 
-  private static Dataset DATASET = Dataset.MODEL_MA;
-  private static String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
-  private static boolean PRINT_CNFS = false;
-  private static boolean PRINT_CONFIG_EXTENDED = false;
-  private static boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
-  private static boolean PRINT_NEW_SAMPLE = false;
+  private static final Dataset DATASET = Dataset.BERKELEY;
+  private static final String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
+  private static final boolean PRINT_CNFS = false;
+  private static final boolean PRINT_CONFIG_EXTENDED = false;
+  private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
+  private static final boolean PRINT_NEW_SAMPLE = false;
 
 
   private static EvolutionSet evoSet;
@@ -49,13 +55,15 @@ public class EvolutionTest {
   private static YASA yasa;
   private static NullMonitor monitor;
 
+  private static TimerCollection timers;
+
 
   @BeforeAll
   public static void readModelRepresentations() {
+    timers = new TimerCollection();
     ExtensionLoader.load();
 
     evoSet = DataLoader.getEvolutionSet(DATASET, absolutPathPrefix);
-
     System.out.println("Retrieving CNFs...");
     // Evolution Step 0
     cnfEvo0 = evoSet.repEvo0.get(CNFProvider.fromFormula());
@@ -97,10 +105,6 @@ public class EvolutionTest {
   public void testRepairSample() {
     AtomicLong counterZeros = new AtomicLong();
     AtomicLong counterNonZeros = new AtomicLong();
-    AtomicLong timerCounterCheckConfiguration = new AtomicLong();
-    AtomicLong timerRemapping = new AtomicLong();
-    AtomicLong timerNewConfiguration = new AtomicLong();
-    AtomicLong timerBuildAndSample = new AtomicLong();
 
     System.out.println(
         "Starting solution analysis (solution count=" + solutionList.getSolutions().size()
@@ -112,13 +116,13 @@ public class EvolutionTest {
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
         System.out.println("############# SOLUTION START ###############");
       }
-      timeStamp.set(System.nanoTime());
+      timers.startTimer(REMAPPING);
       var remappedConfig = remapItemsByName(IntStream.of(s.getLiterals()).toArray(), cnfEvo0, cnfEvo1);
-      timerRemapping.addAndGet(System.nanoTime() - timeStamp.get());
+      timers.stopAndAddTimer(REMAPPING);
 
-      timeStamp.set(System.nanoTime());
+      timers.startTimer(CHECK_CONFIGURATION);
       var isValid = validateEvo0ConfigWithEvo1(formulaEvo, remappedConfig);
-      timerCounterCheckConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
+      timers.stopAndAddTimer(CHECK_CONFIGURATION);
 
       if(isValid.isEmpty()) return;
 
@@ -142,10 +146,12 @@ public class EvolutionTest {
 
 
       // insert partial config into yasa
-      timeStamp.set(System.nanoTime());
+
+      timers.startTimer(NEXT_CONFIGURATION);
       var nextConfiguration = IntStream.of(isValid.get()).filter(i -> i != 0).toArray();
       yasa.newConfiguration(nextConfiguration);
-      timerNewConfiguration.addAndGet(System.nanoTime() - timeStamp.get());
+      timers.stopAndAddTimer(NEXT_CONFIGURATION);
+
 
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
         System.out.println("############## SOLUTION END ################");
@@ -154,12 +160,13 @@ public class EvolutionTest {
     System.out.println("Done solution analysis...");
 
     System.out.println("Building new solutions...");
-    timeStamp.set(System.nanoTime());
+    timers.startTimer(BUILD_CONFIGURATIONS);
     // build sample from partial configurations
     yasa.buildConfigurations(monitor);
     var newSample = StreamSupport.stream(yasa, false)
         .collect(Collectors.toCollection(ArrayList::new));
-    timerBuildAndSample.addAndGet(System.nanoTime() - timeStamp.get());
+    timers.stopAndAddTimer(BUILD_CONFIGURATIONS);
+
 
     if (PRINT_NEW_SAMPLE) {
       System.out.println("\nNEW SAMPLE");
@@ -168,14 +175,16 @@ public class EvolutionTest {
 
     var newSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSample);
 
+    timers.startTimer(NEW_CONFIGURATION);
+    timeStamp.set(System.nanoTime());
     // Calculate coverage
     System.out.println(
         "\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = "
             + oldCoverage + "\n");
+    timers.stopAndAddTimer(NEW_CONFIGURATION);
 
-    EntityPrinter.printStats(timerCounterCheckConfiguration, timerRemapping,
-        timerNewConfiguration,
-        timerBuildAndSample, counterZeros, counterNonZeros);
+    EntityPrinter.printStats(cnfEvo0, cnfEvo1, counterZeros, counterNonZeros);
+    EntityPrinter.printTimers(timers);
   }
 
 
@@ -263,4 +272,5 @@ public class EvolutionTest {
         , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
     return coverage.get(0).getCoverage();
   }
+
 }

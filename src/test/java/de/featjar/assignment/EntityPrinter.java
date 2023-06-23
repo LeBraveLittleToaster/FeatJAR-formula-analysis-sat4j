@@ -1,6 +1,7 @@
 package de.featjar.assignment;
 
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
+import de.featjar.assignment.TimerCollection.TimerType;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
@@ -45,24 +46,61 @@ public class EntityPrinter {
     System.out.println(builder);
   }
 
-  static void printStats(AtomicLong timerCounterCheckConfiguration,
-      AtomicLong timerRemapping, AtomicLong timerNewConfiguration, AtomicLong timerBuildAndSample,
-      AtomicLong counterZeros, AtomicLong counterNonZeros) {
+  static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
+      AtomicLong counterNonZeros) {
+
     System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
-    var totalTime =
-        timerCounterCheckConfiguration.get() + timerRemapping.get() + timerNewConfiguration.get()
-            + timerBuildAndSample.get();
-    System.out.println("Timer total            = " + (totalTime / 1e6) + " ms\n");
-    System.out.println(
-        "Timer CheckConfig      = " + (timerCounterCheckConfiguration.get() / 1e6) + " ms");
-    System.out.println("Timer Remappong        = " + (timerRemapping.get() / 1e6) + " ms");
-    System.out.println("Timer New Config       = " + (timerNewConfiguration.get() / 1e6) + " ms");
-    System.out.println("Timer Build and Sample = " + (timerBuildAndSample.get() / 1e6) + " ms");
-    System.out.println();
+    System.out.println("Evolution Step 0:");
+    System.out.println("Literals Count         = " + cnfEvo0.getVariableMap().getVariableCount());
+    System.out.println("Clauses Count          = " + cnfEvo0.getClauses().size());
+    System.out.println("\nEvolution Step 1:");
+    System.out.println("Literals Count         = " + cnfEvo1.getVariableMap().getVariableCount());
+    System.out.println("Clauses Count          = " + cnfEvo1.getClauses().size());
+    System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
     System.out.println("Configuration literals stats:");
-    System.out.println("Total amount of literals = " + (counterZeros.get() + counterNonZeros.get()));
+    System.out.println(
+        "Total amount of literals = " + (counterZeros.get() + counterNonZeros.get()));
     System.out.println(
         "Amount set to zero       = " + counterZeros.get() + " of " + (counterZeros.get()
             + counterNonZeros.get()));
+  }
+
+  static void printTimers(TimerCollection timerCollection) {
+    var longestEnumCharCount = new AtomicInteger(0);
+    Arrays.stream(TimerType.values()).forEach(timerType -> {
+      if (timerType.toString().length() > longestEnumCharCount.get()) {
+        longestEnumCharCount.set(timerType.toString().length());
+      }
+    });
+
+    AtomicLong totalTime = new AtomicLong(0L);
+    var builder = new StringBuilder();
+    builder.append("++++++++++++++++++++++++++++++++++++++++++++++\n");
+    timerCollection.getAllTimers().forEach((entry) -> {
+          totalTime.addAndGet(entry.y);
+          builder
+              .append(pad(entry.x.toString(), longestEnumCharCount.get() + 1, ' '))
+              .append(" = ")
+              .append((entry.y / 1e6))
+              .append(" ms\n");
+        }
+    );
+    builder.append("++++++++++++++++++++++++++++++++++++++++++++++\n")
+        .append("Total time: ")
+        .append(totalTime.get() / 1e6)
+        .append(" ms\n")
+        .append("++++++++++++++++++++++++++++++++++++++++++++++\n");
+    System.out.println(builder);
+  }
+
+  static String pad(String input, int toSize, char padChar) {
+    if (input.length() >= toSize) {
+      return input;
+    }
+    StringBuilder padded = new StringBuilder(input);
+    while (padded.length() < toSize) {
+      padded.append(padChar);
+    }
+    return padded.toString();
   }
 }
