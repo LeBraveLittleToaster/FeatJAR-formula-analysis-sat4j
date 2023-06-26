@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 public class EvolutionTest {
 
   private static final Dataset DATASET = Dataset.BERKELEY;
-  private static final String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
+  private static final String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
   private static final boolean PRINT_CNFS = false;
   private static final boolean PRINT_CONFIG_EXTENDED = false;
   private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
@@ -110,7 +110,6 @@ public class EvolutionTest {
         "Starting solution analysis (solution count=" + solutionList.getSolutions().size()
             + ")...");
 
-    AtomicLong timeStamp = new AtomicLong(System.nanoTime());
     solutionList.getSolutions().forEach(s -> {
 
       if (PRINT_SOLUTION_AND_CONFIGURATION) {
@@ -173,13 +172,15 @@ public class EvolutionTest {
       System.out.println(newSample);
     }
 
-    var newSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSample);
 
     timers.startTimer(NEW_CONFIGURATION);
-    timeStamp.set(System.nanoTime());
+    var newSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSample);
+    var newValidSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSolutions.getValidSolutions(cnfEvo1)
+            .collect(Collectors.toList()));
+
     // Calculate coverage
     System.out.println(
-        "\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newSolutions) + " | Old Coverage = "
+        "\nNEW COVERAGE = " + calculateCoverage(cnfEvo1, newValidSolutions) + " | Old Coverage = "
             + oldCoverage + "\n");
     timers.stopAndAddTimer(NEW_CONFIGURATION);
 
