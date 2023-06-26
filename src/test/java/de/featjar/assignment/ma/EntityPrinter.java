@@ -1,7 +1,7 @@
-package de.featjar.assignment;
+package de.featjar.assignment.ma;
 
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
-import de.featjar.assignment.TimerCollection.TimerType;
+import de.featjar.assignment.ma.TimerCollection.TimerType;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;

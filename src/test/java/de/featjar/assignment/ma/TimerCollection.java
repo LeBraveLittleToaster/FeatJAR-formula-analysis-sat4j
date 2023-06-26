@@ -1,4 +1,6 @@
-package de.featjar.assignment;
+package de.featjar.assignment.ma;
+
+import de.featjar.assignment.Tuple;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +17,8 @@ public class TimerCollection {
     CHECK_CONFIGURATION,
     NEXT_CONFIGURATION,
     BUILD_CONFIGURATIONS,
-    NEW_CONFIGURATION
+    NEW_CONFIGURATION,
+    CALCULATE_COVERAGE, REDUCE_TO_VALID_ONLY
   }
 
   private final ConcurrentMap<TimerType, TestTimer> timers;
