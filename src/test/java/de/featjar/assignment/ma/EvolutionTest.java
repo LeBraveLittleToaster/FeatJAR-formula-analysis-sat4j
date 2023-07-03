@@ -78,11 +78,11 @@ public class EvolutionTest {
     @Test
     public void testGenerateSample() {
         AtomicLong timerTwise = new AtomicLong(System.nanoTime());
-        EntityPrinter.generateValidTWiseConfigurations(evoSet.repEvo0);
+        EntityPrinter.generateValidTWiseConfigurations(evoSet.repEvo1);
         System.out.println("\n+++++++++++++++++++++++++\n");
         System.out.println(
                 "Timer generate complete new Twise Sample = " + ((System.nanoTime() - timerTwise.get())
-                        / 1e6) + " ms");
+                        / 1e9) + " s");
         System.out.println("\n+++++++++++++++++++++++++\n");
     }
 
@@ -101,13 +101,13 @@ public class EvolutionTest {
             if (PRINT_SOLUTION_AND_CONFIGURATION) {
                 System.out.println("############# SOLUTION START ###############");
             }
-            int[] remappedConfig = RepairOperations.remapOldIndexesViaNames(s, timers, cnfEvo0, cnfEvo1);
+            var remappedConfig = RepairOperations.remapOldIndexesViaNames(s, timers, cnfEvo0, cnfEvo1);
 
-            Optional<int[]> isValid = RepairOperations.validateOldSampleAgainstEvo1(remappedConfig, timers, formulaEvo, PRINT_SOLUTION_AND_CONFIGURATION);
+            var maybeNullifiedConfigOpt = RepairOperations.validateOldSampleAgainstEvo1(remappedConfig, timers, formulaEvo, evoSet.repEvo1, PRINT_SOLUTION_AND_CONFIGURATION);
+            if(maybeNullifiedConfigOpt.isEmpty()) return;
 
-            if (isValid.isEmpty()) return;
-
-            int[] nextConfigurationWithZeros = RepairOperations.countZerosInConfigurations(counterZeros, counterNonZeros, isValid.get());
+            var maybeNullifiedConfig = maybeNullifiedConfigOpt.get();
+            var nextConfigurationWithZeros = RepairOperations.countZerosInConfigurations(counterZeros, counterNonZeros, maybeNullifiedConfig);
 
             if (PRINT_CONFIG_EXTENDED) {
                 System.out.println("OLD CONFIG");
@@ -116,7 +116,7 @@ public class EvolutionTest {
                 EntityPrinter.printConfigurationWithName(nextConfigurationWithZeros, cnfEvo1);
             }
 
-            var successful = RepairOperations.createNewConfigurationsWithYasa(isValid.get(), timers, yasa);
+            var successful = RepairOperations.createNewConfigurationsWithYasa(maybeNullifiedConfig, timers, yasa);
             if (!successful) {
                 faultyCount.addAndGet(1);
             }
@@ -129,9 +129,10 @@ public class EvolutionTest {
 
         System.out.println("Building new solutions...");
 
-        ArrayList<LiteralList> newSample = RepairOperations.buildNewSample(yasa, timers, monitor, PRINT_NEW_SAMPLE);
+        var newSample = RepairOperations.buildNewSample(yasa, timers, monitor, PRINT_NEW_SAMPLE);
 
-        SolutionList newValidOnlySolutions = RepairOperations.filterSolutionList(newSample, timers, evoSet, cnfEvo1);
+        //TODO: all match vs evaluate
+        var newValidOnlySolutions = RepairOperations.filterSolutionList(newSample, timers, evoSet, cnfEvo1);
 
         timers.startTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
         System.out.println(
@@ -145,10 +146,10 @@ public class EvolutionTest {
 
 
     private static double calculateCoverage(CNF cnf, SolutionList solutionList) {
-        TWiseConfigurationUtil util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
-        TWiseStatisticGenerator stat = new TWiseStatisticGenerator(util);
+        var util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
+        var stat = new TWiseStatisticGenerator(util);
 
-        PresenceConditionManager pcManager = new PresenceConditionManager(
+        var pcManager = new PresenceConditionManager(
                 util.getDeadCoreFeatures(),
                 solutionList.getVariableMap().getVariableCount(),
                 TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap())));

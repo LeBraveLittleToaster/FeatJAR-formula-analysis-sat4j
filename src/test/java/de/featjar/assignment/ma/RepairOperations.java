@@ -2,14 +2,17 @@ package de.featjar.assignment.ma;
 
 import de.featjar.analysis.sat4j.ContradictionAnalysis;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
+import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.analysis.solver.RuntimeContradictionException;
 import de.featjar.assignment.DataLoader;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
+import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.Formula;
 import de.featjar.formula.structure.Formulas;
+import de.featjar.formula.structure.atomic.Assignment;
 import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.util.job.InternalMonitor;
 
@@ -78,11 +81,11 @@ public class RepairOperations {
         return remappedConfig;
     }
 
-    static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, boolean printSolutionAndConfiguration) {
+    static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean printSolutionAndConfiguration) {
         timers.startTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);
-        var isValid = validateEvo0ConfigWithEvo1(formulaEvo, remappedConfig, printSolutionAndConfiguration);
+        var maybeNullifiedConfig = validateEvo0ConfigWithEvo1(formulaEvo, repEvo, remappedConfig, timers, printSolutionAndConfiguration);
         timers.stopAndAddTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);
-        return isValid;
+        return maybeNullifiedConfig;
     }
 
 
@@ -121,42 +124,62 @@ public class RepairOperations {
         return nextAssignment.stream().mapToInt(i -> i).toArray();
     }
 
-    static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, int[] s, boolean printSolutionAndConfiguration) {
+    static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, ModelRepresentation repEvo, int[] config, TimerCollection timers, boolean printSolutionAndConfiguration) {
         List<LiteralList> assumptions = new ArrayList<>();
         ContradictionAnalysis contra = new ContradictionAnalysis();
 
         if (printSolutionAndConfiguration) {
-            System.out.println(Arrays.toString(s));
+            System.out.println(Arrays.toString(config));
         }
-        IndexAssignment a = new IndexAssignment();
-        for (int l : s) {
-            a.set(Math.abs(l), l > 0);
+        IndexAssignment indexAssignment = new IndexAssignment();
+        for (int l : config) {
+            indexAssignment.set(Math.abs(l), l > 0);
             assumptions.add(new LiteralList(l));
         }
         contra.setClauseList(assumptions);
 
-        boolean isFormulaValid = (boolean) Formulas.evaluate(formula, a).orElse(false);
+        // TODO: three cases
+        Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);//TODO erfüülbar bei null? HasSolutionAnalysis, minimal unsatisfiable set
         if (printSolutionAndConfiguration) {
-
-            System.out.println("Is configuration valid = " + isFormulaValid);
+            System.out.println("Is configuration valid = " + isFormulaValidOpt);
         }
+        if(isFormulaValidOpt.isEmpty()) {
+            return useHasSolutionAnalysis(timers,indexAssignment, repEvo) ? Optional.of(config) : Optional.empty();
+        }
+        boolean isFormulaValid = (boolean) isFormulaValidOpt.get();
 
         if (isFormulaValid) {
-            return Optional.empty();
+            return Optional.of(config);
         }
 
+        return Optional.of(nullifyErrors(formula, config, indexAssignment));
+    }
+
+    private static boolean useHasSolutionAnalysis(TimerCollection timers, IndexAssignment indexAssignment, ModelRepresentation repEvo) {
+        timers.startTimer(TimerCollection.TimerType.HAS_SOLUTION_ANALYSIS);
+        HasSolutionAnalysis sat = new HasSolutionAnalysis();
+        Assignment assumptions = sat.getAssumptions();
+        indexAssignment.getAll().forEach(kv -> {
+            assumptions.set(kv.getKey(), kv.getValue());
+        });
+        Boolean canBeValid = repEvo.get(sat);
+        timers.stopAndAddTimer(TimerCollection.TimerType.HAS_SOLUTION_ANALYSIS);
+        return canBeValid;
+    }
+
+
+    private static int[] nullifyErrors(Formula formula, int[] config, IndexAssignment indexAssignment) {
         formula.getChildren().forEach(clause -> {
-            boolean isValid = (boolean) Formulas.evaluate(clause, a).orElse(false);
+            boolean isValid = (boolean) Formulas.evaluate(clause, indexAssignment).orElse(false);
             if (!isValid) {
                 Formulas.getVariables(clause).forEach(variable -> {
                     var oldIndex = variable.getIndex() - 1;
-                    if(oldIndex >= 0 && oldIndex < s.length) {
-                        s[oldIndex] =0;
+                    if(oldIndex >= 0 && oldIndex < config.length) {
+                        config[oldIndex] =0;
                     }
                 });
             }
         });
-
-        return Optional.of(s);
+        return config;
     }
 }
