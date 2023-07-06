@@ -136,7 +136,7 @@ public class RepairOperations {
             System.out.println("Is configuration valid = " + isFormulaValidOpt);
         }
         if(isFormulaValidOpt.isEmpty()) {
-            return useHasSolutionAnalysis(timers,indexAssignment, repEvo) ? Optional.of(config) : Optional.empty();
+            return useHasSolutionAnalysis(timers,indexAssignment, repEvo) ? Optional.of(nullifyErrors(formula, config, indexAssignment)) : Optional.empty();
         }
         boolean isFormulaValid = (boolean) isFormulaValidOpt.get();
 
