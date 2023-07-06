@@ -1,8 +1,6 @@
 package de.featjar.assignment.ma;
 
-import de.featjar.analysis.sat4j.ContradictionAnalysis;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
-import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.analysis.solver.RuntimeContradictionException;
 import de.featjar.assignment.DataLoader;
@@ -125,21 +123,15 @@ public class RepairOperations {
     }
 
     static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, ModelRepresentation repEvo, int[] config, TimerCollection timers, boolean printSolutionAndConfiguration) {
-        List<LiteralList> assumptions = new ArrayList<>();
-        ContradictionAnalysis contra = new ContradictionAnalysis();
-
         if (printSolutionAndConfiguration) {
             System.out.println(Arrays.toString(config));
         }
         IndexAssignment indexAssignment = new IndexAssignment();
         for (int l : config) {
             indexAssignment.set(Math.abs(l), l > 0);
-            assumptions.add(new LiteralList(l));
         }
-        contra.setClauseList(assumptions);
 
-        // TODO: three cases
-        Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);//TODO erfüülbar bei null? HasSolutionAnalysis, minimal unsatisfiable set
+        Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);
         if (printSolutionAndConfiguration) {
             System.out.println("Is configuration valid = " + isFormulaValidOpt);
         }

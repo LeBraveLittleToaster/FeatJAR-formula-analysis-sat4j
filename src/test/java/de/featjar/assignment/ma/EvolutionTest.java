@@ -130,8 +130,7 @@ public class EvolutionTest {
         System.out.println("Building new solutions...");
 
         var newSample = RepairOperations.buildNewSample(yasa, timers, monitor, PRINT_NEW_SAMPLE);
-
-        //TODO: all match vs evaluate
+        
         var newValidOnlySolutions = RepairOperations.filterSolutionList(newSample, timers, evoSet, cnfEvo1);
 
         timers.startTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
