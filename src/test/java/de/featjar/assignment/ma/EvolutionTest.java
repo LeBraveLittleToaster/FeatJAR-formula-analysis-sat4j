@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class EvolutionTest {
 
     private static final Dataset DATASET = Dataset.BUSYBOX;
-    private static final String absolutPathPrefix = "C:\\Users\\gamef\\Documents\\GitHub\\FeatJAR\\FeatJAR\\formula-analysis-sat4j\\src\\test\\resources\\";
+    private static final String absolutPathPrefix = "./src/test/resources/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
     private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;

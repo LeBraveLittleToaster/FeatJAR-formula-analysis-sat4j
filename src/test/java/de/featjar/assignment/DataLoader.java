@@ -7,10 +7,10 @@ import java.nio.file.Paths;
 public class DataLoader {
 
   public enum Dataset {
-    BERKELEY("MA_PS\\berkeley_db_model_evo0.xml", "\\MA_PS\\berkeley_db_model_evo1.xml"),
-    MODEL_MA("MA_PS\\model_ma_evo0.xml", "\\MA_PS\\model_ma_evo1.xml"),
+    BERKELEY("MA_PS/berkeley_db_model_evo0.xml", "/MA_PS/berkeley_db_model_evo1.xml"),
+    MODEL_MA("MA_PS/model_ma_evo0.xml", "/MA_PS/model_ma_evo1.xml"),
 
-    BUSYBOX("MA_PS\\busybox\\busyboxEvo0.dimacs", "\\MA_PS\\busybox\\busyboxEvo1.dimacs");
+    BUSYBOX("MA_PS/busybox/busyboxEvo0.dimacs", "/MA_PS/busybox/busyboxEvo1.dimacs");
     public final String pathEvo0;
     public final String pathEvo1;
 
