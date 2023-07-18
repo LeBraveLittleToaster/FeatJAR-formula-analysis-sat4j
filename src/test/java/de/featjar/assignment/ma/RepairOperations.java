@@ -64,8 +64,7 @@ public class RepairOperations {
         IntStream.of(nextConfigurationWithZeros).forEach(v -> {
             if (v == 0) {
                 counterZeros.addAndGet(1);
-            }
-            {
+            }else{
                 counterNonZeros.addAndGet(1);
             }
         });

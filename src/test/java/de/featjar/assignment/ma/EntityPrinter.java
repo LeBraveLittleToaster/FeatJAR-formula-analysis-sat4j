@@ -50,13 +50,15 @@ public class EntityPrinter {
     }
 
     static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
-                           AtomicLong counterNonZeros) {
+                           AtomicLong counterNonZeros, SolutionList evo0Solutions, SolutionList evo1Solutions) {
 
         System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
         System.out.println("Evolution Step 0:");
+        System.out.println("Sample size            = " + evo0Solutions.getSolutions().size());
         System.out.println("Literals Count         = " + cnfEvo0.getVariableMap().getVariableCount());
         System.out.println("Clauses Count          = " + cnfEvo0.getClauses().size());
         System.out.println("\nEvolution Step 1:");
+        System.out.println("Sample size            = " + evo1Solutions.getSolutions().size());
         System.out.println("Literals Count         = " + cnfEvo1.getVariableMap().getVariableCount());
         System.out.println("Clauses Count          = " + cnfEvo1.getClauses().size());
         System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");

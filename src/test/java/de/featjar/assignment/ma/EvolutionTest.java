@@ -139,7 +139,7 @@ public class EvolutionTest {
                         + oldCoverage + "\n");
         timers.stopAndAddTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
 
-        EntityPrinter.printStats(cnfEvo0, cnfEvo1, counterZeros, counterNonZeros);
+        EntityPrinter.printStats(cnfEvo0, cnfEvo1, counterZeros, counterNonZeros, solutionList, newValidOnlySolutions);
         EntityPrinter.printTimers(timers);
     }
 
