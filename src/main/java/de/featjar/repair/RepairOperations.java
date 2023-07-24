@@ -1,10 +1,11 @@
-package de.featjar.assignment.ma;
+package de.featjar.repair;
 
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
-import de.featjar.analysis.sat4j.twise.YASA;
+import de.featjar.analysis.sat4j.solver.Sat4JSolver;
+import de.featjar.analysis.sat4j.twise.*;
 import de.featjar.analysis.solver.RuntimeContradictionException;
-import de.featjar.assignment.DataLoader;
 import de.featjar.clauses.CNF;
+import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
@@ -24,16 +25,30 @@ import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 public class RepairOperations {
-    static SolutionList filterSolutionList(ArrayList<LiteralList> newSample, TimerCollection timers, DataLoader.EvolutionSet evoSet, CNF cnfEvo1) {
+
+    public static double calculateCoverage(CNF cnf, SolutionList solutionList) {
+        var util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
+        var stat = new TWiseStatisticGenerator(util);
+
+        var pcManager = new PresenceConditionManager(
+                util.getDeadCoreFeatures(),
+                solutionList.getVariableMap().getVariableCount(),
+                TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap())));
+        var coverage = stat.getCoverage(List.of(solutionList.getSolutions()),
+                pcManager.getGroupedPresenceConditions(), 2
+                , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
+        return coverage.get(0).getCoverage();
+    }
+    public static SolutionList filterSolutionList(ArrayList<LiteralList> newSample, TimerCollection timers, ModelRepresentation repEvo1, CNF cnfEvo1) {
         timers.startTimer(TimerCollection.TimerType.NEW_CONFIGURATION);
-        var newSolutions = new SolutionList(evoSet.repEvo1.getVariables(), newSample);
-        var newValidSolutionList = new SolutionList(evoSet.repEvo1.getVariables(), newSolutions.getValidSolutions(cnfEvo1)
+        var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
+        var newValidSolutionList = new SolutionList(repEvo1.getVariables(), newSolutions.getValidSolutions(cnfEvo1)
                 .collect(Collectors.toList()));
         timers.stopAndAddTimer(TimerCollection.TimerType.NEW_CONFIGURATION);
         return newValidSolutionList;
     }
 
-    static ArrayList<LiteralList> buildNewSample(YASA yasa, TimerCollection timers, InternalMonitor monitor, boolean printNewSample) {
+    public static ArrayList<LiteralList> buildNewSample(YASA yasa, TimerCollection timers, InternalMonitor monitor, boolean printNewSample) {
         timers.startTimer(TimerCollection.TimerType.BUILD_CONFIGURATIONS);
         yasa.buildConfigurations(monitor);
         var newSample = StreamSupport.stream(yasa, false)
@@ -47,7 +62,7 @@ public class RepairOperations {
         return newSample;
     }
 
-    static boolean createNewConfigurationsWithYasa(int[] isValid, TimerCollection timers, YASA yasa) {
+    public static boolean createNewConfigurationsWithYasa(int[] isValid, TimerCollection timers, YASA yasa) {
         timers.startTimer(TimerCollection.TimerType.NEXT_CONFIGURATION);
         var nextConfiguration = IntStream.of(isValid).filter(i -> i != 0).toArray();
         try {
@@ -60,7 +75,7 @@ public class RepairOperations {
         return true;
     }
 
-    static int[] countZerosInConfigurations(AtomicLong counterZeros, AtomicLong counterNonZeros, int[] nextConfigurationWithZeros) {
+    public static int[] countZerosInConfigurations(AtomicLong counterZeros, AtomicLong counterNonZeros, int[] nextConfigurationWithZeros) {
         IntStream.of(nextConfigurationWithZeros).forEach(v -> {
             if (v == 0) {
                 counterZeros.addAndGet(1);
@@ -71,14 +86,14 @@ public class RepairOperations {
         return nextConfigurationWithZeros;
     }
 
-    static int[] remapOldIndexesViaNames(LiteralList s, TimerCollection timers, CNF cnfEvo0, CNF cnfEvo1) {
+    public static int[] remapOldIndexesViaNames(LiteralList s, TimerCollection timers, CNF cnfEvo0, CNF cnfEvo1) {
         timers.startTimer(TimerCollection.TimerType.REMAPPING);
         var remappedConfig = remapItemsByName(IntStream.of(s.getLiterals()).toArray(), cnfEvo0, cnfEvo1);
         timers.stopAndAddTimer(TimerCollection.TimerType.REMAPPING);
         return remappedConfig;
     }
 
-    static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean printSolutionAndConfiguration) {
+    public static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean printSolutionAndConfiguration) {
         timers.startTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);
         var maybeNullifiedConfig = validateEvo0ConfigWithEvo1(formulaEvo, repEvo, remappedConfig, timers, printSolutionAndConfiguration);
         timers.stopAndAddTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);

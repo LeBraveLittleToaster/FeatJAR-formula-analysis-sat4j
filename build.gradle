@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     api 'de.featjar:formula'
-    api 'org.ow2.sat4j:org.ow2.sat4j.core:2.3.5'
+    //api 'org.ow2.sat4j:org.ow2.sat4j.core:2.3.5'
 }
 
 license {

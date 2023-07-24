@@ -1,7 +1,7 @@
-package de.featjar.assignment.ma;
+package de.featjar.repair;
 
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
-import de.featjar.assignment.ma.TimerCollection.TimerType;
+import de.featjar.repair.TimerCollection.TimerType;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
@@ -13,14 +13,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class EntityPrinter {
 
-    static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
+    public static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
         TWiseConfigurationGenerator twisegen = new TWiseConfigurationGenerator();
         twisegen.setT(2);
         twisegen.setRandom(new Random(1234));
         return rep.get(twisegen);
     }
 
-    static void printCNF(CNF cnf) {
+    public static void printCNF(CNF cnf) {
         System.out.println("++++++ CNF START +++++\n");
         AtomicInteger idx = new AtomicInteger(0);
         cnf.getClauses().forEach(clause -> {
@@ -32,7 +32,7 @@ public class EntityPrinter {
         System.out.println("\n++++++ CNF END +++++");
     }
 
-    static void printConfigurationWithName(int[] assignment, CNF cnf) {
+    public static void printConfigurationWithName(int[] assignment, CNF cnf) {
         var builder = new StringBuilder();
         builder.append("+++++++++CONFIGURATION++++++++++++++++++\n")
                 .append("Config  => ").append(Arrays.toString(assignment)).append("\n")
@@ -49,8 +49,8 @@ public class EntityPrinter {
         System.out.println(builder);
     }
 
-    static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
-                           AtomicLong counterNonZeros, SolutionList evo0Solutions, SolutionList evo1Solutions) {
+    public static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
+                                  AtomicLong counterNonZeros, SolutionList evo0Solutions, SolutionList evo1Solutions) {
 
         System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
         System.out.println("Evolution Step 0:");
@@ -63,6 +63,7 @@ public class EntityPrinter {
         System.out.println("Clauses Count          = " + cnfEvo1.getClauses().size());
         System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
         System.out.println("Configuration literals stats:");
+        System.out.println("Found no mapping for = " + (((long) cnfEvo0.getVariableMap().getVariableCount() * evo0Solutions.getSolutions().size()) - (counterZeros.get() + counterNonZeros.get())));
         System.out.println(
                 "Total amount of literals = " + (counterZeros.get() + counterNonZeros.get()));
         System.out.println(
@@ -70,7 +71,7 @@ public class EntityPrinter {
                         + counterNonZeros.get()));
     }
 
-    static void printTimers(TimerCollection timerCollection) {
+    public static void printTimers(TimerCollection timerCollection) {
         var longestEnumCharCount = new AtomicInteger(0);
         Arrays.stream(TimerType.values()).forEach(timerType -> {
             if (timerType.toString().length() > longestEnumCharCount.get()) {

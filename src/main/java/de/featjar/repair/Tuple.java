@@ -1,4 +1,4 @@
-package de.featjar.assignment;
+package de.featjar.repair;
 
 public class Tuple<X, Y> {
 
