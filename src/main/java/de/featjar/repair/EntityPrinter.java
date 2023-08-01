@@ -1,21 +1,28 @@
 package de.featjar.repair;
 
+import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
+import de.featjar.analysis.sat4j.twise.YASA;
+import de.featjar.clauses.CNFProvider;
 import de.featjar.repair.TimerCollection.TimerType;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
+import de.featjar.util.job.NullMonitor;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class EntityPrinter {
 
-    public static SolutionList generateValidTWiseConfigurations(ModelRepresentation rep) {
+    public static SolutionList generateValidTWiseConfigurations(int t, ModelRepresentation rep) {
         TWiseConfigurationGenerator twisegen = new TWiseConfigurationGenerator();
-        twisegen.setT(2);
+        twisegen.setT(t);
         twisegen.setRandom(new Random(1234));
         return rep.get(twisegen);
     }

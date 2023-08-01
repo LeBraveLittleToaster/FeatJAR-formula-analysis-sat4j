@@ -39,6 +39,7 @@ public class RepairOperations {
                 , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
         return coverage.get(0).getCoverage();
     }
+
     public static SolutionList filterSolutionList(ArrayList<LiteralList> newSample, TimerCollection timers, ModelRepresentation repEvo1, CNF cnfEvo1) {
         timers.startTimer(TimerCollection.TimerType.NEW_CONFIGURATION);
         var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
@@ -62,14 +63,26 @@ public class RepairOperations {
         return newSample;
     }
 
-    public static boolean createNewConfigurationsWithYasa(int[] isValid, TimerCollection timers, YASA yasa) {
+    public static boolean createNewConfigurationsWithYasa(int[] remappedConfig, TimerCollection timers, YASA yasa, ModelRepresentation repEvo, AtomicLong counterZeros, AtomicLong counterNonZeros, boolean THROW_OUT_FAILING_CONFIGS) {
         timers.startTimer(TimerCollection.TimerType.NEXT_CONFIGURATION);
-        var nextConfiguration = IntStream.of(isValid).filter(i -> i != 0).toArray();
+        var nextConfiguration = IntStream.of(remappedConfig).filter(i -> i != 0).toArray();
         try {
             yasa.newConfiguration(nextConfiguration);
-        }catch (RuntimeContradictionException e){
+        } catch (RuntimeContradictionException e) {
+            if (THROW_OUT_FAILING_CONFIGS) {
+                return false;
+            }
+            var maybeNullifiedConfigOpt = RepairOperations.validateOldSampleAgainstEvo1(remappedConfig, timers, repEvo.getFormula(), repEvo, false);
+            if (maybeNullifiedConfigOpt.isEmpty()) return false;
+            var maybeNullifiedConfig = maybeNullifiedConfigOpt.get();
+            RepairOperations.countZerosInConfigurations(counterZeros, counterNonZeros, maybeNullifiedConfig);
+            try {
+                yasa.newConfiguration(Arrays.stream(maybeNullifiedConfig).filter(i -> i != 0).toArray());
+            } catch (RuntimeContradictionException e2Run) {
+                return false;
+            }
             return false;
-        }finally{
+        } finally {
             timers.stopAndAddTimer(TimerCollection.TimerType.NEXT_CONFIGURATION);
         }
         return true;
@@ -79,7 +92,7 @@ public class RepairOperations {
         IntStream.of(nextConfigurationWithZeros).forEach(v -> {
             if (v == 0) {
                 counterZeros.addAndGet(1);
-            }else{
+            } else {
                 counterNonZeros.addAndGet(1);
             }
         });
@@ -88,7 +101,7 @@ public class RepairOperations {
 
     public static int[] remapOldIndexesViaNames(LiteralList s, TimerCollection timers, CNF cnfEvo0, CNF cnfEvo1) {
         timers.startTimer(TimerCollection.TimerType.REMAPPING);
-        var remappedConfig = remapItemsByName(IntStream.of(s.getLiterals()).toArray(), cnfEvo0, cnfEvo1);
+        var remappedConfig = remapItemsByName(s, cnfEvo0, cnfEvo1);
         timers.stopAndAddTimer(TimerCollection.TimerType.REMAPPING);
         return remappedConfig;
     }
@@ -101,10 +114,8 @@ public class RepairOperations {
     }
 
 
-    static int[] remapItemsByName(int[] oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
+    static int[] remapItemsByName(LiteralList oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
         var nextAssignment = new ArrayList<Integer>();
-        List<Integer> oldConfigAsList = IntStream.of(oldConfigurationWithZeros).boxed()
-                .collect(Collectors.toList());
 
         for (var nextIndex = 1; nextIndex <= cnfNext.getVariableMap().getVariableCount(); nextIndex++) {
             // get current var name
@@ -123,14 +134,15 @@ public class RepairOperations {
             // did exist, do we consider it?
             var oldVarIndex = oldVarIndexOpt.get();
             // check if the old index appears in the oldConfig (if set to zero also not consider it)
-            var oldValueOpt = oldConfigAsList.stream().filter(i -> Math.abs(i) == oldVarIndex)
+            var oldValueOpt = Arrays.stream(oldConfigurationWithZeros.getLiterals())
+                    .filter(i -> Math.abs(i) == oldVarIndex)
                     .findFirst();
             if (oldValueOpt.isEmpty()) {
                 continue;
             }
 
             // otherwise add the old value to the new assignment
-            var oldValue = oldValueOpt.get();
+            var oldValue = oldValueOpt.getAsInt();
             nextAssignment.add(oldValue > 0 ? nextIndex : -nextIndex);
         }
         return nextAssignment.stream().mapToInt(i -> i).toArray();
@@ -149,8 +161,8 @@ public class RepairOperations {
         if (printSolutionAndConfiguration) {
             System.out.println("Is configuration valid = " + isFormulaValidOpt);
         }
-        if(isFormulaValidOpt.isEmpty()) {
-            return useHasSolutionAnalysis(timers,indexAssignment, repEvo) ? Optional.of(nullifyErrors(formula, config, indexAssignment)) : Optional.empty();
+        if (isFormulaValidOpt.isEmpty()) {
+            return useHasSolutionAnalysis(timers, indexAssignment, repEvo) ? Optional.of(nullifyErrors(formula, config, indexAssignment)) : Optional.empty();
         }
         boolean isFormulaValid = (boolean) isFormulaValidOpt.get();
 
@@ -180,8 +192,8 @@ public class RepairOperations {
             if (!isValid) {
                 Formulas.getVariables(clause).forEach(variable -> {
                     var oldIndex = variable.getIndex() - 1;
-                    if(oldIndex >= 0 && oldIndex < config.length) {
-                        config[oldIndex] =0;
+                    if (oldIndex >= 0 && oldIndex < config.length) {
+                        config[oldIndex] = 0;
                     }
                 });
             }

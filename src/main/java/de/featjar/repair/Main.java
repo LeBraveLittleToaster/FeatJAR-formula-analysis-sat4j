@@ -1,30 +1,30 @@
-package de.featjar.assignment.ma;
+package de.featjar.repair;
 
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
-import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.CNFProvider;
-import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.Formula;
-import de.featjar.repair.*;
-import de.featjar.repair.DataLoader.Dataset2;
 import de.featjar.util.extension.ExtensionLoader;
 import de.featjar.util.job.NullMonitor;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-public class EvolutionTest {
+public class Main {
 
-    private static final Dataset2 DATASET_2 = Dataset2.BUSYBOX_BEGIN;
+    public static void main(String[] args) {
+        var main = new Main();
+        main.readModelRepresentations();
+        main.testGenerateSample();
+        main.testRepairSample();
+    }
+
+    private static final DataLoader.Dataset2 DATASET_2 = DataLoader.Dataset2.BUSYBOX_BEGIN;
     private static final DataLoader.DatasetN DATASET_N = DataLoader.DatasetN.BUSYBOX_2018;
-    private static final String absolutPathPrefix = "./src/test/resources/";
+    private static final String absolutPathPrefix = "./src/main/resources/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
     private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
@@ -42,9 +42,7 @@ public class EvolutionTest {
 
     private static TimerCollection timers;
 
-
-    @BeforeAll
-    public static void readModelRepresentations() {
+    public void readModelRepresentations() {
         timers = new TimerCollection();
         ExtensionLoader.load();
 
@@ -81,7 +79,6 @@ public class EvolutionTest {
         timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA);
     }
 
-    @Test
     public void testGenerateSample() {
 
         AtomicLong timerTwiseYasa = new AtomicLong(System.nanoTime());
@@ -122,7 +119,6 @@ public class EvolutionTest {
          */
     }
 
-    @Test
     public void testRepairSample() {
         AtomicLong counterZeros = new AtomicLong();
         AtomicLong counterNonZeros = new AtomicLong();

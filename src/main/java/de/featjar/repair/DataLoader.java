@@ -13,7 +13,8 @@ public class DataLoader {
     BERKELEY("MA_PS/berkeley_db_model_evo0.xml", "/MA_PS/berkeley_db_model_evo1.xml"),
     MODEL_MA("MA_PS/model_ma_evo0.xml", "/MA_PS/model_ma_evo1.xml"),
 
-    BUSYBOX("MA_PS/busybox/busyboxEvo0.dimacs", "/MA_PS/busybox/busyboxEvo1.dimacs");
+    BUSYBOX("MA_PS/busybox/busyboxEvo0.dimacs", "/MA_PS/busybox/busyboxEvo1.dimacs"),
+    BUSYBOX_BEGIN("MA_PS/busybox/2020/2020-08-13-clean.dimacs", "MA_PS/busybox/2020/2020-12-16-clean.dimacs");
     public final String pathEvo0;
     public final String pathEvo1;
 
@@ -26,7 +27,9 @@ public class DataLoader {
     BERKELEY(List.of("MA_PS/berkeley_db_model_evo0.xml", "/MA_PS/berkeley_db_model_evo1.xml")),
     MODEL_MA(List.of("MA_PS/model_ma_evo0.xml", "/MA_PS/model_ma_evo1.xml")),
 
-    BUSYBOX(List.of("MA_PS/busybox/busyboxEvo0.dimacs", "/MA_PS/busybox/busyboxEvo1.dimacs"));
+    BUSYBOX(List.of("MA_PS/busybox/busyboxEvo0.dimacs", "/MA_PS/busybox/busyboxEvo1.dimacs")),
+    BUSYBOX_2019(List.of("MA_PS/busybox/2019/2019-01-06-clean.dimacs","MA_PS/busybox/2019/2019-04-30-clean.dimacs","MA_PS/busybox/2019/2019-07-02-clean.dimacs","MA_PS/busybox/2019/2019-10-14-clean.dimacs")),
+    BUSYBOX_2018(List.of("MA_PS/busybox/2018/2018-04-06-clean.dimacs","MA_PS/busybox/2018/2018-06-06-clean.dimacs","MA_PS/busybox/2018/2018-11-18-clean.dimacs"));
     public final List<String> paths;
 
     private DatasetN(List<String> paths) {
@@ -46,7 +49,7 @@ public class DataLoader {
         .load(Paths.get(pathEvo1))
         .orElse(Logger::logProblems);
     System.out.println("Generating valid sample for evo 0...");
-    var solutionList = EntityPrinter.generateValidTWiseConfigurations(repEvo0);
+    var solutionList = EntityPrinter.generateValidTWiseConfigurations(2, repEvo0);
     return new EvolutionSet(repEvo0, repEvo1, solutionList);
   }
 
@@ -61,7 +64,7 @@ public class DataLoader {
     }).collect(Collectors.toList());
 
     System.out.println("Generating valid sample for evo 0...");
-    var solutionList = EntityPrinter.generateValidTWiseConfigurations(models.get(0));
+    var solutionList = EntityPrinter.generateValidTWiseConfigurations(2, models.get(0));
     return new NEvolutionSet(models.toArray(new ModelRepresentation[0]), solutionList);
   }
 

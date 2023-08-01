@@ -29,8 +29,9 @@ import de.featjar.analysis.sat4j.solver.SStrategy;
 import de.featjar.clauses.LiteralList;
 import de.featjar.util.data.Identifier;
 import de.featjar.util.job.InternalMonitor;
-import java.util.stream.IntStream;
 import org.sat4j.core.VecInt;
+
+import java.util.stream.IntStream;
 
 /**
  * Finds core and dead features using a {@link MIG model implication graph}.
