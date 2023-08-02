@@ -15,9 +15,18 @@ public class EvolutionSetN {
         this.evo0Sample = evo0Sample;
     }
 
-    public Optional<EvolutionSet2> tryGetEvolutionSet2(int i, int t, SolutionList oldSample) {
-        return repEvos.length >= 2 && i >= 0 && i + 1 < repEvos.length ?
-                Optional.of(oldSample != null ? EvolutionSet2.createWithoutSample(repEvos[i], repEvos[i + 1], oldSample) : EvolutionSet2.createWithSample(repEvos[i], repEvos[i + 1], t))
-                : Optional.empty();
+    public Optional<EvolutionSet2> tryGetEvolutionSet2(int i, int t, SolutionList oldSample, TimerCollection timers) {
+        if(repEvos.length >= 2 && i >= 0 && i + 1 < repEvos.length) {
+            if (oldSample != null) {
+
+                return Optional.of(EvolutionSet2.createWithoutSample(repEvos[i], repEvos[i + 1], oldSample));
+            }
+            timers.startTimer(TimerCollection.TimerType.CREATE_INITIAL_SAMPLE);
+            var sample = Optional.of(EvolutionSet2.createWithSample(repEvos[i], repEvos[i + 1], t));
+            timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_INITIAL_SAMPLE);
+            return sample;
+
+        }
+        return Optional.empty();
     }
 }

@@ -74,7 +74,7 @@ public class EvolutionTest {
         yasa.setT(2);
         monitor = new NullMonitor();
         yasa.init2(monitor);
-        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA);
+        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA_INSTANCE);
     }
 
     @Test
@@ -127,13 +127,13 @@ public class EvolutionTest {
                 "Starting solution analysis (solution count=" + evoSet.repEvo0Sample.getSolutions().size()
                         + ")...");
 
-        timers.startTimer(TimerCollection.TimerType.CREATE_YASA);
+        timers.startTimer(TimerCollection.TimerType.CREATE_YASA_INSTANCE);
         System.out.println("Initializing Yasa...");
         yasa = new YASA();
         yasa.setSolver(new Sat4JSolver(cnfEvo1));
         monitor = new NullMonitor();
         yasa.init2(monitor);
-        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA);
+        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA_INSTANCE);
         evoSet.repEvo0Sample.getSolutions().forEach(s -> {
 
             if (PRINT_SOLUTION_AND_CONFIGURATION) {

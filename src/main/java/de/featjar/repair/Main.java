@@ -1,7 +1,6 @@
 package de.featjar.repair;
 
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
-import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
@@ -21,7 +20,8 @@ public class Main {
     }
 
     private static final DataLoader.Dataset2 DATASET_2 = DataLoader.Dataset2.BUSYBOX_BEGIN;
-    private static final List<DataLoader.DatasetN> DATASET_N = List.of(DataLoader.DatasetN.BUSYBOX_2018, DataLoader.DatasetN.BUSYBOX_2019);
+    private static final List<DataLoader.DatasetN> DATASET_N = List.of(
+            DataLoader.DatasetN.BUSYBOX_2018, DataLoader.DatasetN.BUSYBOX_2019);
     private static final int T_WISE_T = 2;
     private static final String absolutPathPrefix = "./formula-analysis-sat4j/src/main/resources/";
     private static final boolean PRINT_CNFS = false;
@@ -44,13 +44,11 @@ public class Main {
             var timers = new TimerCollection();
             var monitor = new NullMonitor();
 
-            timers.startTimer(TimerCollection.TimerType.CREATE_INITIAL_SAMPLE);
+
+
             var curEvoSetOpt = curSample == null ?
-                    evoSetN.tryGetEvolutionSet2(curI, T_WISE_T, null) :
-                    evoSetN.tryGetEvolutionSet2(curI, T_WISE_T, curSample);
-
-            timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_INITIAL_SAMPLE);
-
+                    evoSetN.tryGetEvolutionSet2(curI, T_WISE_T, null, timers) :
+                    evoSetN.tryGetEvolutionSet2(curI, T_WISE_T, curSample, timers);
 
             if(curEvoSetOpt.isEmpty()) {
                 System.err.println("failed to get evoset2!");
@@ -76,12 +74,12 @@ public class Main {
 
     private static YASA createYasa(InternalMonitor monitor, CNF cnf, int t, TimerCollection timers){
         System.out.println("Initializing Yasa...");
-        timers.startTimer(TimerCollection.TimerType.CREATE_YASA);
+        timers.startTimer(TimerCollection.TimerType.CREATE_YASA_INSTANCE);
         var yasa = new YASA();
         yasa.setSolver(new Sat4JSolver(cnf));
         yasa.setT(t);
         yasa.init2(monitor);
-        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA);
+        timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_YASA_INSTANCE);
         return yasa;
     }
 
@@ -91,8 +89,7 @@ public class Main {
         AtomicLong counterNonZeros = new AtomicLong();
         AtomicLong faultyCount = new AtomicLong();
         System.out.println(
-                "Starting solution analysis (solution count=" + evoSet.repEvo0Sample.getSolutions().size()
-                        + ")...");
+                "Starting solution analysis (solution count=" + evoSet.repEvo0Sample.getSolutions().size() + ")...");
 
 
         evoSet.repEvo0Sample.getSolutions().forEach(s -> {

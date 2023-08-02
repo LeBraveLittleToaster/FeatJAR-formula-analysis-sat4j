@@ -34,10 +34,6 @@ public class EntityPrinter {
         var newSample = StreamSupport.stream(yasa, false)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        System.out.println("Timer generate complete new Twise Sample [size=" + newSample.size() + "] = "
-                + ((System.nanoTime() - timerTwiseYasa.get()) / 1e9) + " s | "
-                + "BuildTime= " + (buildTime / 1e9) + " s |");
-
         return new SolutionList(rep.getVariables(), newSample);
     }
 
@@ -73,7 +69,7 @@ public class EntityPrinter {
     public static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
                                   AtomicLong counterNonZeros, SolutionList evo0Solutions, SolutionList evo1Solutions) {
 
-        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         System.out.println("Evolution Step 0:");
         System.out.println("Sample size            = " + evo0Solutions.getSolutions().size());
         System.out.println("Literals Count         = " + cnfEvo0.getVariableMap().getVariableCount());
@@ -82,7 +78,7 @@ public class EntityPrinter {
         System.out.println("Sample size            = " + evo1Solutions.getSolutions().size());
         System.out.println("Literals Count         = " + cnfEvo1.getVariableMap().getVariableCount());
         System.out.println("Clauses Count          = " + cnfEvo1.getClauses().size());
-        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++");
+        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         System.out.println("Configuration literals stats:");
         System.out.println("Found no mapping for = " + (((long) cnfEvo0.getVariableMap().getVariableCount() * evo0Solutions.getSolutions().size()) - (counterZeros.get() + counterNonZeros.get())));
         System.out.println(
@@ -99,9 +95,8 @@ public class EntityPrinter {
                 longestEnumCharCount.set(timerType.toString().length());
             }
         });
-
         var builder = new StringBuilder();
-        builder.append("+++++++++Total Time Timer Distribution++++++++\n");
+        builder.append("+++++++++++++++++++++++++++++++++++++Total Time Timer Distribution++++++++++++++++++++++++++++++++++++\n");
         var indexTotalTime = new AtomicLong(1);
         timerCollection.getAllTimersOrdered().stream().filter(kv -> kv.x.addToTotalTime).forEach((entry) -> {
                     builder.append("[")
@@ -109,13 +104,15 @@ public class EntityPrinter {
                             .append("] ")
                             .append(pad(entry.x.toString(), longestEnumCharCount.get() + 1, ' '))
                             .append(" = ")
-                            .append((entry.y / 1e6))
-                            .append(" ms\n");
+                            .append(pad(entry.y / 1e6 + " ms ", 14, ' '))
+                            .append(" | Desc = ")
+                            .append(entry.x.description)
+                            .append("\n");
                     indexTotalTime.incrementAndGet();
                 }
 
         );
-        builder.append("+++++++++++++++Additional Timers++++++++++++++\n");
+        builder.append("+++++++++++++++++++++++++++++++++++++++++++Additional Timers++++++++++++++++++++++++++++++++++++++++++\n");
         var indexAdditionalTimers = new AtomicLong(1);
         timerCollection.getAllTimersOrdered().stream().filter(kv -> !kv.x.addToTotalTime).forEach((entry) -> {
                     builder.append("[")
@@ -123,8 +120,10 @@ public class EntityPrinter {
                             .append("] ")
                             .append(pad(entry.x.toString(), longestEnumCharCount.get() + 1, ' '))
                             .append(" = ")
-                            .append((entry.y / 1e6))
-                            .append(" ms\n");
+                            .append(pad(entry.y / 1e6 + " ms ", 14, ' '))
+                            .append(" | Desc = ")
+                            .append(entry.x.description)
+                            .append("\n");
                     indexAdditionalTimers.incrementAndGet();
                 }
 
@@ -135,11 +134,11 @@ public class EntityPrinter {
                 .mapToLong(kv -> kv.y)
                 .sum()
                 / 1e9d;
-        builder.append("++++++++++++++++++++++++++++++++++++++++++++++\n")
+        builder.append("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
                 .append("Total time: ")
                 .append(String.format("%.2f", timeInSeconds))
                 .append(" s\n")
-                .append("++++++++++++++++++++++++++++++++++++++++++++++\n");
+                .append("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
         System.out.println(builder);
     }
 

@@ -10,24 +10,29 @@ import java.util.stream.Collectors;
 public class TimerCollection {
 
     public enum TimerType {
+        // ++++++++++++++++++INCLUDED TIMERS++++++++++++++
+        REMAPPING(1, true, "Remapping of values from before evo"),
+        REDUCE_TO_VALID_ONLY(3, true, "Reduction to only valid configs"),
+        REPAIR_AND_NEXT_CALL_CONFIGURATION(5, true, "Repairing process"),
+        NEW_CONFIGURATION(6, true, "Inserting config into yasa"),
+        BUILD_CONFIGURATIONS(7, true, "Yasa building call"),
 
-        REMAPPING(1, true),
-        REDUCE_TO_VALID_ONLY(3, true),
-        NEXT_CONFIGURATION(5, true),
-        NEW_CONFIGURATION(6, true),
-        BUILD_CONFIGURATIONS(7, true),
-        CREATE_INITIAL_SAMPLE(1, false),
-        CREATE_YASA(2, false),
-        CALCULATE_COVERAGE(100, false),
-        HAS_SOLUTION_ANALYSIS(5, false),
-        CHECK_CONFIGURATION(1000, false),
-        CREATE_EVOLUTION_SAMPLE(6, false); // included in NEXT_CONFIGURATION
+        // ++++++++++++++++++EXCLUDED TIMERS++++++++++++++
+        CREATE_EVOLUTION_SAMPLE(0, false, "For comparison reason"),
+        CREATE_INITIAL_SAMPLE(1, false, "initial sample only relevant in first step"),
+        CREATE_YASA_INSTANCE(2, false, "same for evolution and non evolution"),
+        CALCULATE_COVERAGE(100, false, "only needed for eval"),
+        HAS_SOLUTION_ANALYSIS(5, false, "Included in REPAIR_CONFIGURATION" ),
+        REPAIR_CONFIGURATION(1000, false, "Included in REPAIR_AND_NEXT...");
         public final int printOrder;
         public final boolean addToTotalTime;
 
-        private TimerType(int printOrder, boolean addToTotalTime) {
+        public final String description;
+
+        private TimerType(int printOrder, boolean addToTotalTime, String description) {
             this.printOrder = printOrder;
             this.addToTotalTime = addToTotalTime;
+            this.description = description;
         }
     }
 

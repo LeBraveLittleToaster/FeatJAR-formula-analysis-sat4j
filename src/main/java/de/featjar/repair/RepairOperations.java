@@ -64,7 +64,7 @@ public class RepairOperations {
     }
 
     public static boolean createNewConfigurationsWithYasa(int[] remappedConfig, TimerCollection timers, YASA yasa, ModelRepresentation repEvo, AtomicLong counterZeros, AtomicLong counterNonZeros, boolean THROW_OUT_FAILING_CONFIGS) {
-        timers.startTimer(TimerCollection.TimerType.NEXT_CONFIGURATION);
+        timers.startTimer(TimerCollection.TimerType.REPAIR_AND_NEXT_CALL_CONFIGURATION);
         var nextConfiguration = IntStream.of(remappedConfig).filter(i -> i != 0).toArray();
         try {
             yasa.newConfiguration(nextConfiguration);
@@ -83,7 +83,7 @@ public class RepairOperations {
             }
             return false;
         } finally {
-            timers.stopAndAddTimer(TimerCollection.TimerType.NEXT_CONFIGURATION);
+            timers.stopAndAddTimer(TimerCollection.TimerType.REPAIR_AND_NEXT_CALL_CONFIGURATION);
         }
         return true;
     }
@@ -107,9 +107,9 @@ public class RepairOperations {
     }
 
     public static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean printSolutionAndConfiguration) {
-        timers.startTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);
+        timers.startTimer(TimerCollection.TimerType.REPAIR_CONFIGURATION);
         var maybeNullifiedConfig = validateEvo0ConfigWithEvo1(formulaEvo, repEvo, remappedConfig, timers, printSolutionAndConfiguration);
-        timers.stopAndAddTimer(TimerCollection.TimerType.CHECK_CONFIGURATION);
+        timers.stopAndAddTimer(TimerCollection.TimerType.REPAIR_CONFIGURATION);
         return maybeNullifiedConfig;
     }
 
