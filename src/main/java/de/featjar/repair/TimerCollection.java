@@ -12,19 +12,22 @@ public class TimerCollection {
     public enum TimerType {
 
         REMAPPING(1, true),
-        CHECK_CONFIGURATION(2, false),
         REDUCE_TO_VALID_ONLY(3, true),
         NEXT_CONFIGURATION(5, true),
         NEW_CONFIGURATION(6, true),
         BUILD_CONFIGURATIONS(7, true),
-        CALCULATE_COVERAGE(8, false),
-        HAS_SOLUTION_ANALYSIS(1, false),
-        CREATE_YASA(2, false);
+        CREATE_INITIAL_SAMPLE(1, false),
+        CREATE_YASA(2, false),
+        CALCULATE_COVERAGE(100, false),
+        HAS_SOLUTION_ANALYSIS(5, false),
+        CHECK_CONFIGURATION(1000, false),
+        CREATE_EVOLUTION_SAMPLE(6, false); // included in NEXT_CONFIGURATION
         public final int printOrder;
         public final boolean addToTotalTime;
 
         private TimerType(int printOrder, boolean addToTotalTime) {
-            this.printOrder = printOrder;this.addToTotalTime = addToTotalTime;
+            this.printOrder = printOrder;
+            this.addToTotalTime = addToTotalTime;
         }
     }
 

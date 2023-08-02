@@ -4,6 +4,7 @@ import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.clauses.CNFProvider;
+import de.featjar.clauses.LiteralList;
 import de.featjar.repair.TimerCollection.TimerType;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
@@ -21,10 +22,23 @@ import java.util.stream.StreamSupport;
 public class EntityPrinter {
 
     public static SolutionList generateValidTWiseConfigurations(int t, ModelRepresentation rep) {
-        TWiseConfigurationGenerator twisegen = new TWiseConfigurationGenerator();
-        twisegen.setT(t);
-        twisegen.setRandom(new Random(1234));
-        return rep.get(twisegen);
+        AtomicLong timerTwiseYasa = new AtomicLong(System.nanoTime());
+        var yasa = new YASA();
+        yasa.setSolver(new Sat4JSolver(rep.get(CNFProvider.fromFormula())));
+        var monitor = new NullMonitor();
+        yasa.init2(monitor);
+        yasa.setT(2);
+        AtomicLong timerTwiseYasaBuild = new AtomicLong(System.nanoTime());
+        yasa.buildConfigurations(monitor);
+        long buildTime = System.nanoTime() - timerTwiseYasaBuild.get();
+        var newSample = StreamSupport.stream(yasa, false)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        System.out.println("Timer generate complete new Twise Sample [size=" + newSample.size() + "] = "
+                + ((System.nanoTime() - timerTwiseYasa.get()) / 1e9) + " s | "
+                + "BuildTime= " + (buildTime / 1e9) + " s |");
+
+        return new SolutionList(rep.getVariables(), newSample);
     }
 
     public static void printCNF(CNF cnf) {

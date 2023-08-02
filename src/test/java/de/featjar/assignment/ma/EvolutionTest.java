@@ -1,11 +1,9 @@
 package de.featjar.assignment.ma;
 
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
-import de.featjar.analysis.sat4j.twise.TWiseConfigurationGenerator;
 import de.featjar.analysis.sat4j.twise.YASA;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.CNFProvider;
-import de.featjar.formula.ModelRepresentation;
 import de.featjar.formula.structure.Formula;
 import de.featjar.repair.*;
 import de.featjar.repair.DataLoader.Dataset2;
@@ -15,7 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -23,7 +21,7 @@ import java.util.stream.StreamSupport;
 public class EvolutionTest {
 
     private static final Dataset2 DATASET_2 = Dataset2.BUSYBOX_BEGIN;
-    private static final DataLoader.DatasetN DATASET_N = DataLoader.DatasetN.BUSYBOX_2018;
+    private static final List<DataLoader.DatasetN> DATASET_N = List.of(DataLoader.DatasetN.BUSYBOX_2018);
     private static final String absolutPathPrefix = "./src/test/resources/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
@@ -32,7 +30,7 @@ public class EvolutionTest {
     private static final boolean THROW_OUT_FAILING_CONFIGS = false;
 
 
-    private static EvolutionSet evoSet;
+    private static EvolutionSet2 evoSet;
     private static CNF cnfEvo0;
     private static CNF cnfEvo1;
     private static double oldCoverage;
@@ -49,11 +47,9 @@ public class EvolutionTest {
         ExtensionLoader.load();
 
         //evoSet = DataLoader.getEvolutionSet(DATASET_2, absolutPathPrefix);
-        var evoSetN = DataLoader.getEvolutionSet(DATASET_N, absolutPathPrefix);
-        var evo0 = evoSetN.repEvos[1];
-        var evo1 = evoSetN.repEvos[2];
-        var sampleEvo0 = EntityPrinter.generateValidTWiseConfigurations(2, evo0);
-        evoSet = new EvolutionSet(evo0,evo1, sampleEvo0);
+        var evoSetN = DataLoader.getEvolutionSetN(DATASET_N, 2, absolutPathPrefix);
+        var sampleEvo0 = EntityPrinter.generateValidTWiseConfigurations(2, evoSetN.get().repEvos[0]);
+        evoSet = new EvolutionSet2(evoSetN.get().repEvos[0],evoSetN.get().repEvos[1], sampleEvo0);
         System.out.println("Retrieving CNFs...");
         // Evolution Step 0
         cnfEvo0 = evoSet.repEvo0.get(CNFProvider.fromFormula());
@@ -69,7 +65,7 @@ public class EvolutionTest {
         }
 
         System.out.println("Calculating coverage...");
-        oldCoverage = RepairOperations.calculateCoverage(cnfEvo0, evoSet.repEvo0Sample);
+        oldCoverage = RepairOperations.calculateCoverage(cnfEvo0, evoSet.repEvo0Sample, 2);
         System.out.println("\nOLD COVERAGE (Should be 1.0) = " + oldCoverage + "\n");
 
         System.out.println("Initializing Yasa...");
@@ -171,7 +167,7 @@ public class EvolutionTest {
 
         timers.startTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
         System.out.println(
-                "\nNEW COVERAGE = " + RepairOperations.calculateCoverage(cnfEvo1, newValidOnlySolutions) + " | Old Coverage = "
+                "\nNEW COVERAGE = " + RepairOperations.calculateCoverage(cnfEvo1, newValidOnlySolutions, 2) + " | Old Coverage = "
                         + oldCoverage + "\n");
         timers.stopAndAddTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
 

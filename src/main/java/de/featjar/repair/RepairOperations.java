@@ -26,7 +26,7 @@ import java.util.stream.StreamSupport;
 
 public class RepairOperations {
 
-    public static double calculateCoverage(CNF cnf, SolutionList solutionList) {
+    public static double calculateCoverage(CNF cnf, SolutionList solutionList, int t) {
         var util = new TWiseConfigurationUtil(cnf, new Sat4JSolver(cnf));
         var stat = new TWiseStatisticGenerator(util);
 
@@ -35,7 +35,7 @@ public class RepairOperations {
                 solutionList.getVariableMap().getVariableCount(),
                 TWiseConfigurationGenerator.convertLiterals(Clauses.getLiterals(cnf.getVariableMap())));
         var coverage = stat.getCoverage(List.of(solutionList.getSolutions()),
-                pcManager.getGroupedPresenceConditions(), 2
+                pcManager.getGroupedPresenceConditions(), t
                 , TWiseStatisticGenerator.ConfigurationScore.NONE, true);
         return coverage.get(0).getCoverage();
     }
@@ -116,7 +116,6 @@ public class RepairOperations {
 
     static int[] remapItemsByName(LiteralList oldConfigurationWithZeros, CNF cnfOld, CNF cnfNext) {
         var nextAssignment = new ArrayList<Integer>();
-
         for (var nextIndex = 1; nextIndex <= cnfNext.getVariableMap().getVariableCount(); nextIndex++) {
             // get current var name
             var nextVarNameOpt = cnfNext.getVariableMap().getVariableName(nextIndex);
@@ -132,17 +131,15 @@ public class RepairOperations {
             }
 
             // did exist, do we consider it?
-            var oldVarIndex = oldVarIndexOpt.get();
+            int oldVarIndex = oldVarIndexOpt.get();
             // check if the old index appears in the oldConfig (if set to zero also not consider it)
-            var oldValueOpt = Arrays.stream(oldConfigurationWithZeros.getLiterals())
-                    .filter(i -> Math.abs(i) == oldVarIndex)
-                    .findFirst();
-            if (oldValueOpt.isEmpty()) {
+
+            if(oldVarIndex > oldConfigurationWithZeros.getVariables().size()){
                 continue;
             }
 
             // otherwise add the old value to the new assignment
-            var oldValue = oldValueOpt.getAsInt();
+            var oldValue = oldConfigurationWithZeros.get(oldVarIndex - 1);
             nextAssignment.add(oldValue > 0 ? nextIndex : -nextIndex);
         }
         return nextAssignment.stream().mapToInt(i -> i).toArray();
