@@ -3,12 +3,16 @@ package de.featjar.repair;
 import de.featjar.formula.ModelRepresentation;
 import de.featjar.util.logging.Logger;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DataLoader {
 
@@ -59,16 +63,30 @@ public class DataLoader {
     }
 
     public static Optional<EvolutionSetN> getEvolutionSetN(List<DatasetN> datasetN, int t, String absolutePrefix) {
-        var paths = datasetN.stream().map(dataN -> dataN.paths).flatMap(List::stream);
+        return getEvolutionSetNFromPaths(
+                datasetN.stream().map(dataN -> dataN.paths).flatMap(List::stream).map(path -> absolutePrefix + path), t);
+    }
+
+    public static Optional<EvolutionSetN> getEvolutionSetNInFolderWithSameName(String filename, int t, String pathToRootFolder) throws IOException {
+        try (Stream<Path> walkStream = Files.walk(Paths.get(pathToRootFolder))) {
+            var paths = walkStream.filter(p -> p.toFile().isFile())
+                    .filter(p -> p.toFile().length() > 0)
+                    .map(Path::toString)
+                    .filter(string -> string.endsWith(filename));
+            return getEvolutionSetNFromPaths(paths, t);
+        }
+    }
+
+    private static Optional<EvolutionSetN> getEvolutionSetNFromPaths(Stream<String> paths, int t) {
         try {
             AtomicInteger i = new AtomicInteger();
             var models = paths.map(path -> {
-                var fullPath = absolutePrefix + path;
-                System.out.println("Loading Dataset Evolution Step " + i.getAndIncrement() + " (path={" + fullPath + "}...");
+                System.out.println("Loading Dataset Evolution Step " + i.getAndIncrement() + " (path={" + path + "}...");
                 return ModelRepresentation
-                        .load(Paths.get(fullPath))
-                        .orElse(Logger::logProblems);
+                        .load(Paths.get(path))
+                        .orElse(problem -> System.out.println(problem));
             }).collect(Collectors.toList());
+
             if (models.stream().anyMatch(Objects::isNull)) {
                 System.err.println("Not all models loaded!");
                 return Optional.empty();
@@ -77,9 +95,8 @@ public class DataLoader {
             var solutionList = EntityPrinter.generateValidTWiseConfigurations(t, models.get(0));
             return Optional.of(new EvolutionSetN(models.toArray(new ModelRepresentation[0]), solutionList));
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
             return Optional.empty();
         }
     }
-
 }

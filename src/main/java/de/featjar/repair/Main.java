@@ -8,13 +8,14 @@ import de.featjar.util.extension.ExtensionLoader;
 import de.featjar.util.job.InternalMonitor;
 import de.featjar.util.job.NullMonitor;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         var main = new Main();
         main.run();
     }
@@ -24,18 +25,25 @@ public class Main {
             DataLoader.DatasetN.BUSYBOX_2018, DataLoader.DatasetN.BUSYBOX_2019);
     private static final int T_WISE_T = 2;
     private static final String absolutPathPrefix = "./formula-analysis-sat4j/src/main/resources/";
+    private static final String absolutFolderPrefix = "./formula-analysis-sat4j/src/main/resources/MA_PS/busybox-dayli/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
     private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
     private static final boolean PRINT_NEW_SAMPLE = false;
     private static final boolean THROW_OUT_FAILING_CONFIGS = false;
 
-    public void run(){
+    public void run() throws IOException {
         ExtensionLoader.load();
         var timerList = new LinkedList<TimerCollection>();
 
-        var evoSetNOpt = DataLoader.getEvolutionSetN(DATASET_N, 2, absolutPathPrefix);
-        if(evoSetNOpt.isEmpty()) throw new RuntimeException("failed to load evolutionset!");
+        var evoSetNOpt = DataLoader.getEvolutionSetNInFolderWithSameName("clean.dimacs", 2, absolutFolderPrefix);
+        if(evoSetNOpt.isEmpty()){
+            System.out.println("Is empty");
+            return;
+        }
+
+        //var evoSetNOpt = DataLoader.getEvolutionSetN(DATASET_N, 2, absolutPathPrefix);
+        //if(evoSetNOpt.isEmpty()) throw new RuntimeException("failed to load evolutionset!");
         var evoSetN = evoSetNOpt.get();
 
         var curI = 0;
@@ -60,6 +68,7 @@ public class Main {
             timers.startTimer(TimerCollection.TimerType.CREATE_EVOLUTION_SAMPLE);
             var rslt = EntityPrinter.generateValidTWiseConfigurations(T_WISE_T, evoSet2.repEvo1);
             timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_EVOLUTION_SAMPLE);
+            System.out.println("New sample size = " + rslt.getSolutions().size());
 
             System.out.println("Calculating coverage...");
             var oldCoverage = RepairOperations.calculateCoverage(evoSet2.repEvo0CNF, evoSet2.repEvo0Sample, T_WISE_T);
