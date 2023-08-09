@@ -46,7 +46,7 @@ public class DataLoader {
         }
     }
 
-    public static EvolutionSet2 getEvolutionSetN(Dataset2 dataset2, String absolutePrefix) {
+    public static EvolutionSet2 getEvolutionSetN(Dataset2 dataset2, int t, String absolutePrefix) {
         var pathEvo0 = absolutePrefix + dataset2.pathEvo0;
         var pathEvo1 = absolutePrefix + dataset2.pathEvo1;
         System.out.println("Loading Dataset Evolution Step 0 (path={" + pathEvo0 + "}...");
@@ -58,7 +58,7 @@ public class DataLoader {
                 .load(Paths.get(pathEvo1))
                 .orElse(Logger::logProblems);
         System.out.println("Generating valid sample for evo 0...");
-        var solutionList = EntityPrinter.generateValidTWiseConfigurations(2, repEvo0);
+        var solutionList = EntityPrinter.generateValidTWiseConfigurations(t, repEvo0);
         return new EvolutionSet2(repEvo0, repEvo1, solutionList);
     }
 

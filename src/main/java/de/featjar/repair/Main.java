@@ -20,11 +20,7 @@ public class Main {
         main.run();
     }
 
-    private static final DataLoader.Dataset2 DATASET_2 = DataLoader.Dataset2.BUSYBOX_BEGIN;
-    private static final List<DataLoader.DatasetN> DATASET_N = List.of(
-            DataLoader.DatasetN.BUSYBOX_2018, DataLoader.DatasetN.BUSYBOX_2019);
-    private static final int T_WISE_T = 2;
-    private static final String absolutPathPrefix = "./formula-analysis-sat4j/src/main/resources/";
+    private static final int T_WISE_T = 3;
     private static final String absolutFolderPrefix = "./formula-analysis-sat4j/src/main/resources/MA_PS/busybox-dayli/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
@@ -36,7 +32,7 @@ public class Main {
         ExtensionLoader.load();
         var timerList = new LinkedList<TimerCollection>();
 
-        var evoSetNOpt = DataLoader.getEvolutionSetNInFolderWithSameName("clean.dimacs", 2, absolutFolderPrefix);
+        var evoSetNOpt = DataLoader.getEvolutionSetNInFolderWithSameName("clean.dimacs", T_WISE_T, absolutFolderPrefix);
         if(evoSetNOpt.isEmpty()){
             System.out.println("Is empty");
             return;
@@ -51,8 +47,6 @@ public class Main {
         for(int i = 0; i + 1 < evoSetN.repEvos.length; i++){
             var timers = new TimerCollection();
             var monitor = new NullMonitor();
-
-
 
             var curEvoSetOpt = curSample == null ?
                     evoSetN.tryGetEvolutionSet2(curI, T_WISE_T, null, timers) :
@@ -70,12 +64,15 @@ public class Main {
             timers.stopAndAddTimer(TimerCollection.TimerType.CREATE_EVOLUTION_SAMPLE);
             System.out.println("New sample size = " + rslt.getSolutions().size());
 
+            /*
             System.out.println("Calculating coverage...");
             var oldCoverage = RepairOperations.calculateCoverage(evoSet2.repEvo0CNF, evoSet2.repEvo0Sample, T_WISE_T);
             System.out.println("\nOLD COVERAGE (Should be 1.0) = " + oldCoverage + "\n");
 
+
+             */
             var yasa = createYasa(monitor, evoSet2.repEvo1CNF, T_WISE_T, timers);
-            curSample = testRepairSample(evoSet2, yasa, monitor, oldCoverage, timers);
+            curSample = testRepairSample(evoSet2, yasa, monitor, -1, timers);
             curI++;
             timerList.add(timers);
         }
@@ -134,7 +131,7 @@ public class Main {
 
         timers.startTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
         System.out.println(
-                "\nNEW COVERAGE = " + RepairOperations.calculateCoverage(evoSet.repEvo1CNF, newValidOnlySolutions, T_WISE_T) + " | Old Coverage = "
+                "\nNEW COVERAGE = " + -1 /*RepairOperations.calculateCoverage(evoSet.repEvo1CNF, newValidOnlySolutions, T_WISE_T) */+ " | Old Coverage = "
                         + oldCoverage + "\n");
         timers.stopAndAddTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
 

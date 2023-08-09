@@ -24,10 +24,10 @@ public class EntityPrinter {
     public static SolutionList generateValidTWiseConfigurations(int t, ModelRepresentation rep) {
         AtomicLong timerTwiseYasa = new AtomicLong(System.nanoTime());
         var yasa = new YASA();
+        yasa.setT(t);
         yasa.setSolver(new Sat4JSolver(rep.get(CNFProvider.fromFormula())));
         var monitor = new NullMonitor();
         yasa.init2(monitor);
-        yasa.setT(2);
         AtomicLong timerTwiseYasaBuild = new AtomicLong(System.nanoTime());
         yasa.buildConfigurations(monitor);
         long buildTime = System.nanoTime() - timerTwiseYasaBuild.get();
