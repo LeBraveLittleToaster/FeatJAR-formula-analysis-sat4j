@@ -49,15 +49,15 @@ public class DataLoader {
     public static EvolutionSet2 getEvolutionSetN(Dataset2 dataset2, int t, String absolutePrefix) {
         var pathEvo0 = absolutePrefix + dataset2.pathEvo0;
         var pathEvo1 = absolutePrefix + dataset2.pathEvo1;
-        System.out.println("Loading Dataset Evolution Step 0 (path={" + pathEvo0 + "}...");
+        Logger.logInfo("Loading Dataset Evolution Step 0 (path={" + pathEvo0 + "}...");
         var repEvo0 = ModelRepresentation
                 .load(Paths.get(pathEvo0))
                 .orElse(Logger::logProblems);
-        System.out.println("Loading Dataset Evolution Step 1 (path={" + pathEvo1 + "}...");
+        Logger.logInfo("Loading Dataset Evolution Step 1 (path={" + pathEvo1 + "}...");
         var repEvo1 = ModelRepresentation
                 .load(Paths.get(pathEvo1))
                 .orElse(Logger::logProblems);
-        System.out.println("Generating valid sample for evo 0...");
+        Logger.logInfo("Generating valid sample for evo 0...");
         var solutionList = EntityPrinter.generateValidTWiseConfigurations(t, repEvo0);
         return new EvolutionSet2(repEvo0, repEvo1, solutionList);
     }
@@ -81,17 +81,17 @@ public class DataLoader {
         try {
             AtomicInteger i = new AtomicInteger();
             var models = paths.map(path -> {
-                System.out.println("Loading Dataset Evolution Step " + i.getAndIncrement() + " (path={" + path + "}...");
+                Logger.logInfo("Loading Dataset Evolution Step " + i.getAndIncrement() + " (path={" + path + "}...");
                 return ModelRepresentation
                         .load(Paths.get(path))
-                        .orElse(problem -> System.out.println(problem));
+                        .orElse(problem -> Logger.logInfo(problem));
             }).collect(Collectors.toList());
 
             if (models.stream().anyMatch(Objects::isNull)) {
                 System.err.println("Not all models loaded!");
                 return Optional.empty();
             }
-            System.out.println("Generating valid sample for evo 0...");
+            Logger.logInfo("Generating valid sample for evo 0...");
             var solutionList = EntityPrinter.generateValidTWiseConfigurations(t, models.get(0));
             return Optional.of(new EvolutionSetN(models.toArray(new ModelRepresentation[0]), solutionList));
         } catch (Exception e) {

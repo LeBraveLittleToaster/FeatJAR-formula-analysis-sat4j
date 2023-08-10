@@ -14,6 +14,7 @@ import de.featjar.formula.structure.Formulas;
 import de.featjar.formula.structure.atomic.Assignment;
 import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.util.job.InternalMonitor;
+import de.featjar.util.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,12 +41,12 @@ public class RepairOperations {
         return coverage.get(0).getCoverage();
     }
 
-    public static SolutionList filterSolutionList(ArrayList<LiteralList> newSample, TimerCollection timers, ModelRepresentation repEvo1, CNF cnfEvo1) {
-        timers.startTimer(TimerCollection.TimerType.NEW_CONFIGURATION);
+    public static SolutionList filterSolutionList(List<LiteralList> newSample, TimerCollection timers, TimerCollection.TimerType timerType, ModelRepresentation repEvo1, CNF cnfEvo1) {
+        timers.startTimer(timerType);
         var newSolutions = new SolutionList(repEvo1.getVariables(), newSample);
         var newValidSolutionList = new SolutionList(repEvo1.getVariables(), newSolutions.getValidSolutions(cnfEvo1)
                 .collect(Collectors.toList()));
-        timers.stopAndAddTimer(TimerCollection.TimerType.NEW_CONFIGURATION);
+        timers.stopAndAddTimer(timerType);
         return newValidSolutionList;
     }
 
@@ -57,8 +58,8 @@ public class RepairOperations {
         timers.stopAndAddTimer(TimerCollection.TimerType.BUILD_CONFIGURATIONS);
 
         if (printNewSample) {
-            System.out.println("\nNEW SAMPLE");
-            System.out.println(newSample);
+            Logger.logInfo("\nNEW SAMPLE");
+            Logger.logInfo(newSample);
         }
         return newSample;
     }
@@ -147,7 +148,7 @@ public class RepairOperations {
 
     static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, ModelRepresentation repEvo, int[] config, TimerCollection timers, boolean printSolutionAndConfiguration) {
         if (printSolutionAndConfiguration) {
-            System.out.println(Arrays.toString(config));
+            Logger.logInfo(Arrays.toString(config));
         }
         IndexAssignment indexAssignment = new IndexAssignment();
         for (int l : config) {
@@ -156,7 +157,7 @@ public class RepairOperations {
 
         Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);
         if (printSolutionAndConfiguration) {
-            System.out.println("Is configuration valid = " + isFormulaValidOpt);
+            Logger.logInfo("Is configuration valid = " + isFormulaValidOpt);
         }
         if (isFormulaValidOpt.isEmpty()) {
             return useHasSolutionAnalysis(timers, indexAssignment, repEvo) ? Optional.of(nullifyErrors(formula, config, indexAssignment)) : Optional.empty();

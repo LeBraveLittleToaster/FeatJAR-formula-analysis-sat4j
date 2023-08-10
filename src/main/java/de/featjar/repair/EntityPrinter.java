@@ -10,6 +10,7 @@ import de.featjar.clauses.CNF;
 import de.featjar.clauses.solutions.SolutionList;
 import de.featjar.formula.ModelRepresentation;
 import de.featjar.util.job.NullMonitor;
+import de.featjar.util.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,31 +23,27 @@ import java.util.stream.StreamSupport;
 public class EntityPrinter {
 
     public static SolutionList generateValidTWiseConfigurations(int t, ModelRepresentation rep) {
-        AtomicLong timerTwiseYasa = new AtomicLong(System.nanoTime());
         var yasa = new YASA();
         yasa.setT(t);
         yasa.setSolver(new Sat4JSolver(rep.get(CNFProvider.fromFormula())));
         var monitor = new NullMonitor();
         yasa.init2(monitor);
-        AtomicLong timerTwiseYasaBuild = new AtomicLong(System.nanoTime());
         yasa.buildConfigurations(monitor);
-        long buildTime = System.nanoTime() - timerTwiseYasaBuild.get();
         var newSample = StreamSupport.stream(yasa, false)
                 .collect(Collectors.toCollection(ArrayList::new));
-
         return new SolutionList(rep.getVariables(), newSample);
     }
 
     public static void printCNF(CNF cnf) {
-        System.out.println("++++++ CNF START +++++\n");
+        Logger.logInfo("++++++ CNF START +++++\n");
         AtomicInteger idx = new AtomicInteger(0);
         cnf.getClauses().forEach(clause -> {
-            System.out.println("[" + idx.getAndIncrement() + "] " + clause);
+            Logger.logInfo("[" + idx.getAndIncrement() + "] " + clause);
             for (int literal : clause.getLiterals()) {
-                System.out.println("\t" + cnf.getVariableMap().getVariableName(Math.abs(literal)).get());
+                Logger.logInfo("\t" + cnf.getVariableMap().getVariableName(Math.abs(literal)).get());
             }
         });
-        System.out.println("\n++++++ CNF END +++++");
+        Logger.logInfo("\n++++++ CNF END +++++");
     }
 
     public static void printConfigurationWithName(int[] assignment, CNF cnf) {
@@ -63,27 +60,27 @@ public class EntityPrinter {
         }
         builder.append("\n");
         builder.append("+++++++++CONFIGURATION++++++++++++++++++\n");
-        System.out.println(builder);
+        Logger.logInfo(builder);
     }
 
     public static void printStats(CNF cnfEvo0, CNF cnfEvo1, AtomicLong counterZeros,
                                   AtomicLong counterNonZeros, SolutionList evo0Solutions, SolutionList evo1Solutions) {
 
-        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-        System.out.println("Evolution Step 0:");
-        System.out.println("Sample size            = " + evo0Solutions.getSolutions().size());
-        System.out.println("Literals Count         = " + cnfEvo0.getVariableMap().getVariableCount());
-        System.out.println("Clauses Count          = " + cnfEvo0.getClauses().size());
-        System.out.println("\nEvolution Step 1:");
-        System.out.println("Sample size            = " + evo1Solutions.getSolutions().size());
-        System.out.println("Literals Count         = " + cnfEvo1.getVariableMap().getVariableCount());
-        System.out.println("Clauses Count          = " + cnfEvo1.getClauses().size());
-        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-        System.out.println("Configuration literals stats:");
-        System.out.println("Found no mapping for = " + (((long) cnfEvo0.getVariableMap().getVariableCount() * evo0Solutions.getSolutions().size()) - (counterZeros.get() + counterNonZeros.get())));
-        System.out.println(
+        Logger.logInfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        Logger.logInfo("Evolution Step 0:");
+        Logger.logInfo("Sample size            = " + evo0Solutions.getSolutions().size());
+        Logger.logInfo("Literals Count         = " + cnfEvo0.getVariableMap().getVariableCount());
+        Logger.logInfo("Clauses Count          = " + cnfEvo0.getClauses().size());
+        Logger.logInfo("\nEvolution Step 1:");
+        Logger.logInfo("Sample size            = " + evo1Solutions.getSolutions().size());
+        Logger.logInfo("Literals Count         = " + cnfEvo1.getVariableMap().getVariableCount());
+        Logger.logInfo("Clauses Count          = " + cnfEvo1.getClauses().size());
+        Logger.logInfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        Logger.logInfo("Configuration literals stats:");
+        Logger.logInfo("Found no mapping for = " + (((long) cnfEvo0.getVariableMap().getVariableCount() * evo0Solutions.getSolutions().size()) - (counterZeros.get() + counterNonZeros.get())));
+        Logger.logInfo(
                 "Total amount of literals = " + (counterZeros.get() + counterNonZeros.get()));
-        System.out.println(
+        Logger.logInfo(
                 "Amount set to zero       = " + counterZeros.get() + " of " + (counterZeros.get()
                         + counterNonZeros.get()));
     }
@@ -139,7 +136,7 @@ public class EntityPrinter {
                 .append(String.format("%.2f", timeInSeconds))
                 .append(" s\n")
                 .append("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-        System.out.println(builder);
+        Logger.logInfo(builder);
     }
 
     static String pad(String input, int toSize, char padChar) {

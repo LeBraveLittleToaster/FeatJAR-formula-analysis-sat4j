@@ -1,5 +1,7 @@
 package de.featjar.repair;
 
+import de.featjar.util.logging.Logger;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -12,7 +14,7 @@ class TestTimer {
 
     public void startTimer() {
         if (isRunning.get()) {
-            System.out.println("Cannot start timer, already running!");
+            Logger.logInfo("Cannot start timer, already running!");
             return;
         }
         startTimeNano = new AtomicLong(System.nanoTime());
@@ -21,7 +23,7 @@ class TestTimer {
 
     public long stopTimer() {
         if (!isRunning.get()) {
-            System.out.println("No timer running!");
+            Logger.logInfo("No timer running!");
         }
         isRunning.set(false);
         return accumulatedTimeNano.addAndGet(System.nanoTime() - startTimeNano.get());

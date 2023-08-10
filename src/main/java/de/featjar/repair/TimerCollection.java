@@ -23,7 +23,8 @@ public class TimerCollection {
         CREATE_YASA_INSTANCE(2, false, "same for evolution and non evolution"),
         CALCULATE_COVERAGE(100, false, "only needed for eval"),
         HAS_SOLUTION_ANALYSIS(5, false, "Included in REPAIR_CONFIGURATION" ),
-        REPAIR_CONFIGURATION(1000, false, "Included in REPAIR_AND_NEXT...");
+        REPAIR_CONFIGURATION(1000, false, "Included in REPAIR_AND_NEXT..."),
+        FILTER_REMAPPED_SAMPLE(1001, false, "Track how long filtering a remapped sample takes");
         public final int printOrder;
         public final boolean addToTotalTime;
 
@@ -40,6 +41,10 @@ public class TimerCollection {
 
     public TimerCollection() {
         this.timers = new ConcurrentHashMap<>();
+    }
+
+    public long getTimerByTimerType(TimerType timerType){
+        return this.timers.getOrDefault(timerType, new TestTimer()).getTime();
     }
 
     public void startTimer(TimerType timerType) {

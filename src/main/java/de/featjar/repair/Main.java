@@ -20,8 +20,8 @@ public class Main {
         main.run();
     }
 
-    private static final int T_WISE_T = 3;
-    private static final String absolutFolderPrefix = "./formula-analysis-sat4j/src/main/resources/MA_PS/busybox-dayli/";
+    private static final int T_WISE_T = 2;
+    private static final String absolutFolderPrefix = "./formula-analysis-sat4j/src/main/resources/MA_PS/uclibc-case-study/";
     private static final boolean PRINT_CNFS = false;
     private static final boolean PRINT_CONFIG_EXTENDED = false;
     private static final boolean PRINT_SOLUTION_AND_CONFIGURATION = false;
@@ -127,7 +127,7 @@ public class Main {
 
         var newSample = RepairOperations.buildNewSample(yasa, timers, monitor, PRINT_NEW_SAMPLE);
 
-        var newValidOnlySolutions = RepairOperations.filterSolutionList(newSample, timers, evoSet.repEvo1, evoSet.repEvo1CNF);
+        var newValidOnlySolutions = RepairOperations.filterSolutionList(newSample, timers, TimerCollection.TimerType.NEW_CONFIGURATION, evoSet.repEvo1, evoSet.repEvo1CNF);
 
         timers.startTimer(TimerCollection.TimerType.CALCULATE_COVERAGE);
         System.out.println(
