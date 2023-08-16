@@ -3,7 +3,6 @@ package de.featjar.repair;
 import de.featjar.analysis.sat4j.HasSolutionAnalysis;
 import de.featjar.analysis.sat4j.solver.Sat4JSolver;
 import de.featjar.analysis.sat4j.twise.*;
-import de.featjar.analysis.solver.RuntimeContradictionException;
 import de.featjar.clauses.CNF;
 import de.featjar.clauses.Clauses;
 import de.featjar.clauses.LiteralList;
@@ -16,6 +15,7 @@ import de.featjar.formula.structure.atomic.IndexAssignment;
 import de.featjar.util.job.InternalMonitor;
 import de.featjar.util.logging.Logger;
 
+import javax.print.attribute.standard.MediaSize;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -67,25 +67,19 @@ public class RepairOperations {
     public static boolean createNewConfigurationsWithYasa(int[] remappedConfig, TimerCollection timers, YASA yasa, ModelRepresentation repEvo, AtomicLong counterZeros, AtomicLong counterNonZeros, boolean THROW_OUT_FAILING_CONFIGS) {
         timers.startTimer(TimerCollection.TimerType.REPAIR_AND_NEXT_CALL_CONFIGURATION);
         var nextConfiguration = IntStream.of(remappedConfig).filter(i -> i != 0).toArray();
-        try {
-            yasa.newConfiguration(nextConfiguration);
-        } catch (RuntimeContradictionException e) {
-            if (THROW_OUT_FAILING_CONFIGS) {
-                return false;
-            }
-            var maybeNullifiedConfigOpt = RepairOperations.validateOldSampleAgainstEvo1(remappedConfig, timers, repEvo.getFormula(), repEvo, false);
-            if (maybeNullifiedConfigOpt.isEmpty()) return false;
-            var maybeNullifiedConfig = maybeNullifiedConfigOpt.get();
-            RepairOperations.countZerosInConfigurations(counterZeros, counterNonZeros, maybeNullifiedConfig);
-            try {
-                yasa.newConfiguration(Arrays.stream(maybeNullifiedConfig).filter(i -> i != 0).toArray());
-            } catch (RuntimeContradictionException e2Run) {
-                return false;
-            }
+
+        var maybeNullifiedConfigOpt = RepairOperations.validateOldSampleAgainstEvo1(nextConfiguration, timers, repEvo.getFormula(), repEvo, THROW_OUT_FAILING_CONFIGS, false);
+        if (maybeNullifiedConfigOpt.isEmpty()) {
             return false;
-        } finally {
-            timers.stopAndAddTimer(TimerCollection.TimerType.REPAIR_AND_NEXT_CALL_CONFIGURATION);
+        } else {
+            int[] configAsArr = maybeNullifiedConfigOpt.get().getAll().stream().mapToInt(p -> (boolean)p.getValue() ? p.getKey() : -p.getKey()).toArray();
+            yasa.newConfiguration(configAsArr);
         }
+
+        //RepairOperations.countZerosInConfigurations(counterZeros, counterNonZeros, maybeNullifiedConfig);
+
+        timers.stopAndAddTimer(TimerCollection.TimerType.REPAIR_AND_NEXT_CALL_CONFIGURATION);
+
         return true;
     }
 
@@ -107,9 +101,9 @@ public class RepairOperations {
         return remappedConfig;
     }
 
-    public static Optional<int[]> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean printSolutionAndConfiguration) {
+    public static Optional<IndexAssignment> validateOldSampleAgainstEvo1(int[] remappedConfig, TimerCollection timers, Formula formulaEvo, ModelRepresentation repEvo, boolean THROW_OUT_FAILING_CONFIGS, boolean printSolutionAndConfiguration) {
         timers.startTimer(TimerCollection.TimerType.REPAIR_CONFIGURATION);
-        var maybeNullifiedConfig = validateEvo0ConfigWithEvo1(formulaEvo, repEvo, remappedConfig, timers, printSolutionAndConfiguration);
+        var maybeNullifiedConfig = validateEvo0ConfigWithEvo1(formulaEvo, repEvo, remappedConfig, timers, THROW_OUT_FAILING_CONFIGS, printSolutionAndConfiguration);
         timers.stopAndAddTimer(TimerCollection.TimerType.REPAIR_CONFIGURATION);
         return maybeNullifiedConfig;
     }
@@ -135,7 +129,7 @@ public class RepairOperations {
             int oldVarIndex = oldVarIndexOpt.get();
             // check if the old index appears in the oldConfig (if set to zero also not consider it)
 
-            if(oldVarIndex > oldConfigurationWithZeros.getVariables().size()){
+            if (oldVarIndex > oldConfigurationWithZeros.getVariables().size()) {
                 continue;
             }
 
@@ -146,29 +140,37 @@ public class RepairOperations {
         return nextAssignment.stream().mapToInt(i -> i).toArray();
     }
 
-    static Optional<int[]> validateEvo0ConfigWithEvo1(Formula formula, ModelRepresentation repEvo, int[] config, TimerCollection timers, boolean printSolutionAndConfiguration) {
-        if (printSolutionAndConfiguration) {
-            Logger.logInfo(Arrays.toString(config));
+    static Optional<IndexAssignment> validateEvo0ConfigWithEvo1(Formula formula, ModelRepresentation repEvo, int[] config, TimerCollection timers, boolean THROW_OUT_FAILING_CONFIGS, boolean printSolutionAndConfiguration) {
+        var indexAssignment = buildIndexAssignment(config, false);
+        Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);
+
+        if (isFormulaValidOpt.isEmpty()) {
+            if (THROW_OUT_FAILING_CONFIGS) {
+                return Optional.empty();
+            }
+            if (!useHasSolutionAnalysis(timers, indexAssignment, repEvo)) {
+                return Optional.empty();
+            }
+        }else {
+            var isFormulaValid = (boolean) isFormulaValidOpt.get();
+            if (isFormulaValid) return Optional.of(indexAssignment);
         }
+
+        var nullifiedIndex = buildIndexAssignment(nullifyErrors(formula, config, indexAssignment), true);
+        if(useHasSolutionAnalysis(timers, nullifiedIndex, repEvo)){
+            return Optional.of(nullifiedIndex);
+        }
+        return Optional.empty();
+    }
+
+    private static IndexAssignment buildIndexAssignment(int[] config, boolean filterZero) {
         IndexAssignment indexAssignment = new IndexAssignment();
         for (int l : config) {
-            indexAssignment.set(Math.abs(l), l > 0);
+            if(filterZero && l != 0) {
+                indexAssignment.set(Math.abs(l), l > 0);
+            }
         }
-
-        Optional<Object> isFormulaValidOpt = Formulas.evaluate(formula, indexAssignment);
-        if (printSolutionAndConfiguration) {
-            Logger.logInfo("Is configuration valid = " + isFormulaValidOpt);
-        }
-        if (isFormulaValidOpt.isEmpty()) {
-            return useHasSolutionAnalysis(timers, indexAssignment, repEvo) ? Optional.of(nullifyErrors(formula, config, indexAssignment)) : Optional.empty();
-        }
-        boolean isFormulaValid = (boolean) isFormulaValidOpt.get();
-
-        if (isFormulaValid) {
-            return Optional.of(config);
-        }
-
-        return Optional.of(nullifyErrors(formula, config, indexAssignment));
+        return indexAssignment;
     }
 
     private static boolean useHasSolutionAnalysis(TimerCollection timers, IndexAssignment indexAssignment, ModelRepresentation repEvo) {
